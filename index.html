@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AirQ - Live Airport Security & Check-in Times</title>
-    <meta name="description" content="Real-time US airport security wait times and smart arrival predictions. Never miss a flight again.">
+    <meta name="description" content="Real-time US airport security wait times, terminal-level tracking, and smart Safe Zone arrival predictions. Free basic access.">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,10 +27,10 @@
         </nav>
         <div class="hero-content">
             <div class="hero-badge">LIVE TRACKING FOR 450+ US AIRPORTS</div>
-            <h1>Never Stress About<br><span class="gradient-text">Airport Timing</span> Again</h1>
-            <p class="hero-sub">Real-time security wait times and AI-powered arrival predictions for every major US airport. Know exactly when to leave for your flight.</p>
+            <h1>Know When to Leave.<br><span class="gradient-text">Down to the Minute.</span></h1>
+            <p class="hero-sub">Terminal-level security spikes. Dynamic "leave now" alerts. Safe Zone and Risk Zone windows so you never cut it too close — or waste time at the gate.</p>
             <div class="hero-actions">
-                <a href="#tracker" class="btn-primary btn-lg">Check Wait Times <span class="btn-arrow">→</span></a>
+                <a href="#tracker" class="btn-primary btn-lg">Check Wait Times — Free <span class="btn-arrow">→</span></a>
                 <a href="#features" class="btn-ghost btn-lg">How It Works</a>
             </div>
             <div class="hero-stats">
@@ -45,8 +45,8 @@
                 </div>
                 <div class="stat-divider"></div>
                 <div class="stat">
-                    <span class="stat-num">~94%</span>
-                    <span class="stat-label">Prediction Accuracy</span>
+                    <span class="stat-num">Terminal</span>
+                    <span class="stat-label">Level Detail</span>
                 </div>
             </div>
         </div>
@@ -60,28 +60,32 @@
         <div class="container">
             <div class="section-header">
                 <span class="section-badge">FEATURES</span>
-                <h2>Everything You Need to<br>Catch Your Flight</h2>
+                <h2>Not Just Wait Times.<br>A Decision Engine.</h2>
             </div>
             <div class="features-grid">
                 <div class="feature-card">
                     <div class="feature-icon">⏱️</div>
                     <h3>Live Wait Times</h3>
-                    <p>Real-time security checkpoint and check-in wait times updated continuously for all major US airports.</p>
+                    <p>Real-time security checkpoint and check-in wait times by terminal. See which checkpoint is fastest right now.</p>
+                    <span class="feature-tier free">FREE</span>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">🧠</div>
-                    <h3>Smart Predictions</h3>
-                    <p>Our algorithm analyzes historical patterns, time of day, day of week, and seasonal trends to predict future wait times.</p>
+                    <div class="feature-icon">🚨</div>
+                    <h3>Spike Alerts</h3>
+                    <p>"Security just spiked at Terminal 3 — if you don't leave in the next 12 minutes, you'll miss your 4:00 PM flight." Dynamic, urgent, real.</p>
+                    <span class="feature-tier pro">PRO</span>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">🕐</div>
-                    <h3>Arrival Calculator</h3>
-                    <p>Enter your flight time and get a personalized recommendation for when to arrive at the airport. Check up to 24 hours ahead.</p>
+                    <div class="feature-icon">🛡️</div>
+                    <h3>Safe Zone / Risk Zone</h3>
+                    <p>Not one arrival time — two windows. The Safe Zone (95% confidence) and Risk Zone (you might make it). We always err on the side of caution.</p>
+                    <span class="feature-tier pro">PRO</span>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">📊</div>
-                    <h3>Continuous Updates</h3>
-                    <p>Predictions refresh automatically so you always have the latest estimate. Check back anytime up to your flight.</p>
+                    <h3>Continuous Predictions</h3>
+                    <p>Predictions update every 2 minutes and shift in real-time as conditions change. The closer your flight, the sharper the prediction.</p>
+                    <span class="feature-tier pro">PRO</span>
                 </div>
             </div>
         </div>
@@ -92,52 +96,65 @@
         <div class="container">
             <div class="section-header">
                 <span class="section-badge">PRICING</span>
-                <h2>Simple, One-Time Access</h2>
-                <p class="section-sub">No subscriptions. No hidden fees. Pay once, use forever.</p>
+                <h2>Free to Check. Pro to Never Miss.</h2>
+                <p class="section-sub">Basic wait times are free, forever. Pro unlocks the smart prediction engine.</p>
             </div>
-            <div class="pricing-card">
-                <div class="pricing-badge">LIFETIME ACCESS</div>
-                <div class="pricing-amount">
-                    <span class="pricing-dollar">$</span>
-                    <span class="pricing-num">5</span>
-                    <span class="pricing-period">one time</span>
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <div class="pricing-badge free-badge">FREE FOREVER</div>
+                    <div class="pricing-amount">
+                        <span class="pricing-dollar">$</span>
+                        <span class="pricing-num">0</span>
+                    </div>
+                    <ul class="pricing-features">
+                        <li>✓ All 450+ US airports</li>
+                        <li>✓ Current security wait times</li>
+                        <li>✓ Terminal-level breakdown</li>
+                        <li>✓ 24-hour forecast chart</li>
+                        <li class="disabled">✗ Safe/Risk Zone predictions</li>
+                        <li class="disabled">✗ Dynamic "Leave Now" alerts</li>
+                        <li class="disabled">✗ Continuous auto-refresh</li>
+                    </ul>
+                    <a href="#tracker" class="btn-ghost btn-full">Start Free</a>
                 </div>
-                <ul class="pricing-features">
-                    <li>✓ All 450+ US airports</li>
-                    <li>✓ Real-time security wait times</li>
-                    <li>✓ Smart arrival predictions</li>
-                    <li>✓ 24-hour advance check</li>
-                    <li>✓ Continuous live updates</li>
-                    <li>✓ Lifetime access — no subscription</li>
-                </ul>
-                <button class="btn-primary btn-lg btn-full" id="buyBtn" onclick="handlePurchase()">
-                    Get Access — $5
-                </button>
-                <p class="pricing-note">Secure payment via Stripe</p>
+                <div class="pricing-card featured">
+                    <div class="pricing-badge">PRO — LIFETIME</div>
+                    <div class="pricing-amount">
+                        <span class="pricing-dollar">$</span>
+                        <span class="pricing-num">5</span>
+                        <span class="pricing-period">one time</span>
+                    </div>
+                    <ul class="pricing-features">
+                        <li>✓ Everything in Free</li>
+                        <li>✓ Safe Zone / Risk Zone windows</li>
+                        <li>✓ Dynamic "Leave Now" alerts</li>
+                        <li>✓ Spike detection & warnings</li>
+                        <li>✓ Continuous 2-min auto-refresh</li>
+                        <li>✓ Personalized buffer calculator</li>
+                        <li>✓ Lifetime access — no subscription</li>
+                    </ul>
+                    <button class="btn-primary btn-lg btn-full" onclick="handlePurchase()">
+                        Get Pro — $5
+                    </button>
+                    <p class="pricing-note">Secure payment via Stripe</p>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- Tracker App (gated) -->
+    <!-- Tracker App -->
     <section class="tracker-section" id="tracker">
         <div class="container">
-            <!-- Paywall overlay -->
-            <div class="paywall" id="paywall">
-                <div class="paywall-content">
-                    <div class="paywall-icon">🔒</div>
-                    <h2>Unlock the Tracker</h2>
-                    <p>Get lifetime access to live airport security times and smart arrival predictions for just $5.</p>
-                    <button class="btn-primary btn-lg" onclick="handlePurchase()">Unlock for $5</button>
-                    <p class="paywall-hint">Already purchased? <a href="#" onclick="showAccessKeyModal(); return false;">Enter access key</a></p>
-                </div>
-            </div>
-
-            <!-- Tracker UI (visible after payment) -->
-            <div class="tracker-app" id="trackerApp" style="display: none;">
+            <div class="tracker-app" id="trackerApp">
                 <div class="tracker-header">
                     <h2>Airport Security Tracker</h2>
-                    <div class="live-indicator">
-                        <span class="live-dot"></span> LIVE
+                    <div class="tracker-header-right">
+                        <div class="pro-status" id="proStatus" style="display:none;">
+                            <span class="pro-badge-sm">PRO</span>
+                        </div>
+                        <div class="live-indicator">
+                            <span class="live-dot"></span> LIVE
+                        </div>
                     </div>
                 </div>
 
@@ -163,24 +180,36 @@
                         </div>
                     </div>
 
-                    <!-- Current Wait Times -->
+                    <!-- Urgency Alert Banner (Pro only) -->
+                    <div class="urgency-banner" id="urgencyBanner" style="display: none;">
+                        <div class="urgency-icon">🚨</div>
+                        <div class="urgency-text" id="urgencyText"></div>
+                        <div class="urgency-timer" id="urgencyTimer"></div>
+                    </div>
+
+                    <!-- Terminal-Level Wait Times -->
+                    <div class="terminal-tabs" id="terminalTabs"></div>
+
                     <div class="wait-times-grid">
                         <div class="wait-card">
                             <div class="wait-label">Security (Standard)</div>
                             <div class="wait-time" id="secStandard">--</div>
                             <div class="wait-unit">minutes</div>
+                            <div class="wait-trend" id="secStandardTrend"></div>
                             <div class="wait-bar"><div class="wait-bar-fill" id="secStandardBar"></div></div>
                         </div>
                         <div class="wait-card">
                             <div class="wait-label">Security (TSA PreCheck)</div>
                             <div class="wait-time" id="secPrecheck">--</div>
                             <div class="wait-unit">minutes</div>
+                            <div class="wait-trend" id="secPrecheckTrend"></div>
                             <div class="wait-bar"><div class="wait-bar-fill precheck" id="secPrecheckBar"></div></div>
                         </div>
                         <div class="wait-card">
                             <div class="wait-label">Check-in / Counter</div>
                             <div class="wait-time" id="checkinTime">--</div>
                             <div class="wait-unit">minutes</div>
+                            <div class="wait-trend" id="checkinTrend"></div>
                             <div class="wait-bar"><div class="wait-bar-fill checkin" id="checkinBar"></div></div>
                         </div>
                         <div class="wait-card status-card">
@@ -190,48 +219,110 @@
                         </div>
                     </div>
 
-                    <!-- Prediction Tool -->
-                    <div class="prediction-section">
-                        <h3>🧠 When Should I Leave for the Airport?</h3>
-                        <p class="prediction-desc">Enter your flight departure time and we'll tell you when to arrive. You can check this up to 24 hours before your flight — predictions update continuously.</p>
-                        <div class="prediction-form">
-                            <div class="form-group">
-                                <label>Flight Date</label>
-                                <input type="date" id="flightDate">
-                            </div>
-                            <div class="form-group">
-                                <label>Departure Time</label>
-                                <input type="time" id="flightTime">
-                            </div>
-                            <div class="form-group">
-                                <label>Ticket Type</label>
-                                <select id="ticketType">
-                                    <option value="standard">Standard</option>
-                                    <option value="precheck">TSA PreCheck</option>
-                                </select>
-                            </div>
-                            <button class="btn-primary" onclick="calculateArrival()">Calculate Arrival Time</button>
+                    <!-- Pro Prediction Tool -->
+                    <div class="prediction-section" id="predictionSection">
+                        <div class="pro-gate" id="proGate">
+                            <h3>🧠 Smart Arrival Predictor</h3>
+                            <p class="prediction-desc">Get Safe Zone and Risk Zone arrival windows with dynamic alerts. Unlock with Pro.</p>
+                            <button class="btn-primary" onclick="handlePurchase()">Unlock Pro — $5</button>
                         </div>
-
-                        <div class="prediction-result" id="predictionResult" style="display: none;">
-                            <div class="prediction-card">
-                                <div class="prediction-label">Recommended Airport Arrival</div>
-                                <div class="prediction-time" id="arrivalTime"></div>
-                                <div class="prediction-breakdown" id="predictionBreakdown"></div>
-                                <div class="prediction-confidence">
-                                    <span>Confidence:</span>
-                                    <div class="confidence-bar"><div class="confidence-fill" id="confidenceFill"></div></div>
-                                    <span id="confidencePercent"></span>
+                        <div class="pro-content" id="proContent" style="display: none;">
+                            <h3>🧠 When Should I Leave?</h3>
+                            <p class="prediction-desc">Enter your flight departure time. We'll give you two windows: a <strong>Safe Zone</strong> (leave by this time and you'll make it with room to spare) and a <strong>Risk Zone</strong> (cutting it close — possible but not guaranteed). Predictions refresh every 2 minutes.</p>
+                            <div class="prediction-form">
+                                <div class="form-group">
+                                    <label>Flight Date</label>
+                                    <input type="date" id="flightDate">
                                 </div>
+                                <div class="form-group">
+                                    <label>Departure Time</label>
+                                    <input type="time" id="flightTime">
+                                </div>
+                                <div class="form-group">
+                                    <label>Ticket Type</label>
+                                    <select id="ticketType">
+                                        <option value="standard">Standard</option>
+                                        <option value="precheck">TSA PreCheck</option>
+                                    </select>
+                                </div>
+                                <button class="btn-primary" onclick="calculateArrival()">Calculate</button>
                             </div>
-                            <div class="prediction-refresh">
-                                <span class="refresh-icon">🔄</span>
-                                Predictions refresh automatically every 5 minutes
+
+                            <div class="prediction-result" id="predictionResult" style="display: none;">
+                                <!-- Safe Zone -->
+                                <div class="zone-card safe-zone">
+                                    <div class="zone-header">
+                                        <span class="zone-icon">🟢</span>
+                                        <span class="zone-title">SAFE ZONE</span>
+                                        <span class="zone-confidence" id="safeConfidence"></span>
+                                    </div>
+                                    <div class="zone-label">Arrive at airport by</div>
+                                    <div class="zone-time" id="safeArrival"></div>
+                                    <div class="zone-leave">Leave home by: <strong id="safeLeave"></strong></div>
+                                    <div class="zone-detail" id="safeDetail"></div>
+                                </div>
+                                <!-- Risk Zone -->
+                                <div class="zone-card risk-zone">
+                                    <div class="zone-header">
+                                        <span class="zone-icon">🟡</span>
+                                        <span class="zone-title">RISK ZONE</span>
+                                        <span class="zone-confidence" id="riskConfidence"></span>
+                                    </div>
+                                    <div class="zone-label">Latest possible airport arrival</div>
+                                    <div class="zone-time" id="riskArrival"></div>
+                                    <div class="zone-leave">Leave home by: <strong id="riskLeave"></strong></div>
+                                    <div class="zone-detail" id="riskDetail"></div>
+                                </div>
+                                <!-- Breakdown -->
+                                <div class="prediction-breakdown-card">
+                                    <h4>Time Breakdown</h4>
+                                    <div class="breakdown-grid" id="breakdownGrid"></div>
+                                </div>
+                                <div class="prediction-refresh">
+                                    <span class="refresh-icon">🔄</span>
+                                    Predictions auto-refresh every 2 minutes &middot; Next refresh: <span id="nextRefresh">2:00</span>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 24h Forecast -->
+                    <!-- Crowdsource Section -->
+                    <div class="crowdsource-section" id="crowdsourceSection">
+                        <div class="crowdsource-header">
+                            <h3>📡 Data Source</h3>
+                            <div class="data-source-toggle">
+                                <button class="data-source-btn active" id="btnModeled" onclick="setDataSource('modeled')">Modeled</button>
+                                <button class="data-source-btn" id="btnCrowd" onclick="setDataSource('crowd')">Crowdsourced</button>
+                            </div>
+                        </div>
+                        <div class="crowdsource-report">
+                            <span style="font-size: 0.85rem; color: var(--text-muted); margin-right: 4px;">Report wait time:</span>
+                            <div class="crowd-input-group">
+                                <label>Security</label>
+                                <input type="number" id="crowdWaitMin" min="0" max="120" placeholder="min">
+                            </div>
+                            <div class="crowd-input-group">
+                                <label>Type</label>
+                                <select id="crowdType">
+                                    <option value="standard">Standard</option>
+                                    <option value="precheck">PreCheck</option>
+                                </select>
+                            </div>
+                            <div class="crowd-input-group" id="crowdTerminalGroup">
+                                <label>Terminal</label>
+                                <select id="crowdTerminal"></select>
+                            </div>
+                            <button class="btn-crowd" onclick="submitCrowdReport()">Submit</button>
+                        </div>
+                        <div class="crowd-thanks" id="crowdThanks">Thanks! Your report helps other travelers.</div>
+                        <div class="crowd-stats" id="crowdStats">
+                            <span class="crowd-stat">Reports today: <strong id="crowdCount">0</strong></span>
+                            <span class="crowd-stat">Avg reported wait: <strong id="crowdAvg">--</strong></span>
+                            <span class="crowd-stat">Last report: <strong id="crowdLast">--</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- 24h Forecast (Free) -->
                     <div class="forecast-section">
                         <h3>📊 24-Hour Wait Time Forecast</h3>
                         <div class="forecast-chart" id="forecastChart"></div>
@@ -251,17 +342,20 @@
     <section class="disclaimer-section">
         <div class="container">
             <div class="disclaimer-box">
-                <h3>⚠️ Important Disclaimer</h3>
-                <p><strong>AirQ provides estimated wait times and arrival predictions based on historical data, statistical models, and publicly available information. These are estimates only and should not be relied upon as guaranteed.</strong></p>
+                <h3>⚠️ Important Disclaimer — Please Read</h3>
+                <p><strong>AirQ provides estimated wait times and arrival predictions based on historical data, statistical models, and publicly available information. These are estimates only and should never be treated as guarantees.</strong></p>
                 <p>By using this service, you acknowledge and agree that:</p>
                 <ul>
-                    <li>All wait times and predictions are <strong>approximations</strong> and may vary from actual conditions.</li>
-                    <li>AirQ, its creators, and affiliates <strong>assume absolutely no responsibility</strong> if you miss your flight, arrive too late, or experience any travel disruption based on information provided by this service.</li>
-                    <li>You are solely responsible for planning your travel with adequate buffer time.</li>
-                    <li>Airport conditions can change rapidly due to weather, security incidents, staffing changes, and other unforeseen factors.</li>
-                    <li>We recommend always adding a personal buffer of at least 30 minutes beyond our recommendation.</li>
+                    <li>All wait times, Safe Zones, and Risk Zones are <strong>approximations</strong>. Real-world conditions can differ significantly.</li>
+                    <li>AirQ, its creators, and affiliates <strong>accept absolutely no responsibility or liability</strong> if you miss your flight, arrive too late, or experience any travel disruption based on information provided by this service.</li>
+                    <li><strong>You are solely responsible</strong> for planning your travel with adequate buffer time. We strongly recommend always adding a personal buffer beyond our Safe Zone recommendation.</li>
+                    <li>Airport conditions can change <strong>rapidly and unpredictably</strong> due to weather, security incidents, staffing changes, system outages, and other unforeseen factors that our models cannot account for.</li>
+                    <li>The "Risk Zone" is exactly what it sounds like — <strong>risky</strong>. If you arrive in this window, you accept a meaningful probability of missing your flight.</li>
+                    <li>Our predictions are designed to be <strong>conservative</strong>, but no prediction system is perfect. When in doubt, leave earlier.</li>
                 </ul>
-                <p class="disclaimer-final"><strong>USE AT YOUR OWN RISK. WE ARE NOT LIABLE FOR ANY MISSED FLIGHTS OR TRAVEL DISRUPTIONS.</strong></p>
+                <div class="disclaimer-final-box">
+                    <p class="disclaimer-final"><strong>USE AT YOUR OWN RISK. WE ARE NOT LIABLE FOR ANY MISSED FLIGHTS, CONNECTIONS, REBOOKING FEES, OR TRAVEL DISRUPTIONS OF ANY KIND. BY USING AIRQ, YOU WAIVE ALL CLAIMS AGAINST US.</strong></p>
+                </div>
             </div>
         </div>
     </section>
@@ -290,7 +384,7 @@
     <div class="modal-overlay" id="accessKeyModal" style="display: none;">
         <div class="modal">
             <button class="modal-close" onclick="closeAccessKeyModal()">&times;</button>
-            <h3>Enter Access Key</h3>
+            <h3>Enter Pro Access Key</h3>
             <p>Enter the access key you received after purchase.</p>
             <input type="text" id="accessKeyInput" placeholder="AIRQ-XXXX-XXXX-XXXX" class="modal-input">
             <button class="btn-primary btn-full" onclick="verifyAccessKey()">Verify</button>
@@ -302,11 +396,11 @@
     <div class="modal-overlay" id="successModal" style="display: none;">
         <div class="modal success-modal">
             <div class="success-icon">✅</div>
-            <h3>Payment Successful!</h3>
+            <h3>Pro Unlocked!</h3>
             <p>Your access key:</p>
             <div class="access-key-display" id="accessKeyDisplay"></div>
-            <p class="key-note">Save this key! You'll need it to access the tracker on other devices.</p>
-            <button class="btn-primary btn-full" onclick="closeSuccessModal()">Start Using Tracker</button>
+            <p class="key-note">Save this key! You'll need it to access Pro on other devices.</p>
+            <button class="btn-primary btn-full" onclick="closeSuccessModal()">Start Using Pro</button>
         </div>
     </div>
 
