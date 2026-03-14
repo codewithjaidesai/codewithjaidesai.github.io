@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AirQ - Live Airport Security & Check-in Times</title>
-    <meta name="description" content="Real-time US airport security wait times, terminal-level tracking, and smart Safe Zone arrival predictions. Free basic access.">
+    <meta name="description" content="Real-time US airport security wait times, terminal-level tracking, and smart Safe Zone arrival predictions. 100% free.">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,14 +21,13 @@
             </div>
             <div class="nav-links">
                 <a href="#features">Features</a>
-                <a href="#pricing">Pricing</a>
                 <a href="#tracker" class="btn-nav">Launch Tracker</a>
             </div>
         </nav>
         <div class="hero-content">
             <div class="hero-badge">LIVE TRACKING FOR 450+ US AIRPORTS</div>
             <h1>Know When to Leave.<br><span class="gradient-text">Down to the Minute.</span></h1>
-            <p class="hero-sub">Terminal-level security spikes. Dynamic "leave now" alerts. Safe Zone and Risk Zone windows so you never cut it too close — or waste time at the gate.</p>
+            <p class="hero-sub">Terminal-level security spikes. Dynamic "leave now" alerts. Safe Zone and Risk Zone windows so you never cut it too close — or waste time at the gate. 100% free.</p>
             <div class="hero-actions">
                 <a href="#tracker" class="btn-primary btn-lg">Check Wait Times — Free <span class="btn-arrow">→</span></a>
                 <a href="#features" class="btn-ghost btn-lg">How It Works</a>
@@ -73,70 +72,19 @@
                     <div class="feature-icon">🚨</div>
                     <h3>Spike Alerts</h3>
                     <p>"Security just spiked at Terminal 3 — if you don't leave in the next 12 minutes, you'll miss your 4:00 PM flight." Dynamic, urgent, real.</p>
-                    <span class="feature-tier pro">PRO</span>
+                    <span class="feature-tier free">FREE</span>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">🛡️</div>
                     <h3>Safe Zone / Risk Zone</h3>
                     <p>Not one arrival time — two windows. The Safe Zone (95% confidence) and Risk Zone (you might make it). We always err on the side of caution.</p>
-                    <span class="feature-tier pro">PRO</span>
+                    <span class="feature-tier free">FREE</span>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">📊</div>
                     <h3>Continuous Predictions</h3>
                     <p>Predictions update every 2 minutes and shift in real-time as conditions change. The closer your flight, the sharper the prediction.</p>
-                    <span class="feature-tier pro">PRO</span>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Pricing -->
-    <section class="pricing" id="pricing">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-badge">PRICING</span>
-                <h2>Free to Check. Pro to Never Miss.</h2>
-                <p class="section-sub">Basic wait times are free, forever. Pro unlocks the smart prediction engine.</p>
-            </div>
-            <div class="pricing-grid">
-                <div class="pricing-card">
-                    <div class="pricing-badge free-badge">FREE FOREVER</div>
-                    <div class="pricing-amount">
-                        <span class="pricing-dollar">$</span>
-                        <span class="pricing-num">0</span>
-                    </div>
-                    <ul class="pricing-features">
-                        <li>✓ All 450+ US airports</li>
-                        <li>✓ Current security wait times</li>
-                        <li>✓ Terminal-level breakdown</li>
-                        <li>✓ 24-hour forecast chart</li>
-                        <li class="disabled">✗ Safe/Risk Zone predictions</li>
-                        <li class="disabled">✗ Dynamic "Leave Now" alerts</li>
-                        <li class="disabled">✗ Continuous auto-refresh</li>
-                    </ul>
-                    <a href="#tracker" class="btn-ghost btn-full">Start Free</a>
-                </div>
-                <div class="pricing-card featured">
-                    <div class="pricing-badge">PRO — LIFETIME</div>
-                    <div class="pricing-amount">
-                        <span class="pricing-dollar">$</span>
-                        <span class="pricing-num">5</span>
-                        <span class="pricing-period">one time</span>
-                    </div>
-                    <ul class="pricing-features">
-                        <li>✓ Everything in Free</li>
-                        <li>✓ Safe Zone / Risk Zone windows</li>
-                        <li>✓ Dynamic "Leave Now" alerts</li>
-                        <li>✓ Spike detection & warnings</li>
-                        <li>✓ Continuous 2-min auto-refresh</li>
-                        <li>✓ Personalized buffer calculator</li>
-                        <li>✓ Lifetime access — no subscription</li>
-                    </ul>
-                    <button class="btn-primary btn-lg btn-full" onclick="handlePurchase()">
-                        Get Pro — $5
-                    </button>
-                    <p class="pricing-note">Secure payment via Stripe</p>
+                    <span class="feature-tier free">FREE</span>
                 </div>
             </div>
         </div>
@@ -149,9 +97,6 @@
                 <div class="tracker-header">
                     <h2>Airport Security Tracker</h2>
                     <div class="tracker-header-right">
-                        <div class="pro-status" id="proStatus" style="display:none;">
-                            <span class="pro-badge-sm">PRO</span>
-                        </div>
                         <div class="live-indicator">
                             <span class="live-dot"></span> LIVE
                         </div>
@@ -180,7 +125,7 @@
                         </div>
                     </div>
 
-                    <!-- Urgency Alert Banner (Pro only) -->
+                    <!-- Urgency Alert Banner -->
                     <div class="urgency-banner" id="urgencyBanner" style="display: none;">
                         <div class="urgency-icon">🚨</div>
                         <div class="urgency-text" id="urgencyText"></div>
@@ -219,14 +164,9 @@
                         </div>
                     </div>
 
-                    <!-- Pro Prediction Tool -->
+                    <!-- Smart Arrival Predictor -->
                     <div class="prediction-section" id="predictionSection">
-                        <div class="pro-gate" id="proGate">
-                            <h3>🧠 Smart Arrival Predictor</h3>
-                            <p class="prediction-desc">Get Safe Zone and Risk Zone arrival windows with dynamic alerts. Unlock with Pro.</p>
-                            <button class="btn-primary" onclick="handlePurchase()">Unlock Pro — $5</button>
-                        </div>
-                        <div class="pro-content" id="proContent" style="display: none;">
+                        <div class="pro-content" id="proContent">
                             <h3>🧠 When Should I Leave?</h3>
                             <p class="prediction-desc">Enter your flight departure time. We'll give you two windows: a <strong>Safe Zone</strong> (leave by this time and you'll make it with room to spare) and a <strong>Risk Zone</strong> (cutting it close — possible but not guaranteed). Predictions refresh every 2 minutes.</p>
                             <div class="prediction-form">
@@ -370,7 +310,6 @@
                 </div>
                 <div class="footer-links">
                     <a href="#features">Features</a>
-                    <a href="#pricing">Pricing</a>
                     <a href="#tracker">Tracker</a>
                 </div>
             </div>
@@ -379,30 +318,6 @@
             </div>
         </div>
     </footer>
-
-    <!-- Access Key Modal -->
-    <div class="modal-overlay" id="accessKeyModal" style="display: none;">
-        <div class="modal">
-            <button class="modal-close" onclick="closeAccessKeyModal()">&times;</button>
-            <h3>Enter Pro Access Key</h3>
-            <p>Enter the access key you received after purchase.</p>
-            <input type="text" id="accessKeyInput" placeholder="AIRQ-XXXX-XXXX-XXXX" class="modal-input">
-            <button class="btn-primary btn-full" onclick="verifyAccessKey()">Verify</button>
-            <p class="modal-error" id="accessKeyError" style="display: none;">Invalid access key. Please try again.</p>
-        </div>
-    </div>
-
-    <!-- Payment Success Modal -->
-    <div class="modal-overlay" id="successModal" style="display: none;">
-        <div class="modal success-modal">
-            <div class="success-icon">✅</div>
-            <h3>Pro Unlocked!</h3>
-            <p>Your access key:</p>
-            <div class="access-key-display" id="accessKeyDisplay"></div>
-            <p class="key-note">Save this key! You'll need it to access Pro on other devices.</p>
-            <button class="btn-primary btn-full" onclick="closeSuccessModal()">Start Using Pro</button>
-        </div>
-    </div>
 
     <script src="airports.js"></script>
     <script src="app.js"></script>

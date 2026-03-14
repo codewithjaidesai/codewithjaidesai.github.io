@@ -12,61 +12,9 @@ let refreshCountdown = 120; // seconds
 let countdownInterval = null;
 let previousWaitTimes = {}; // for trend detection
 
-// --- Access Control (Pro) ---
-const ACCESS_KEY_PREFIX = "AIRQ";
-const STORAGE_KEY = "airq_pro_key";
-
+// --- All features are free ---
 function isPro() {
-    return !!localStorage.getItem(STORAGE_KEY);
-}
-
-function unlockPro(key) {
-    localStorage.setItem(STORAGE_KEY, key);
-    showProUI();
-}
-
-function showProUI() {
-    document.getElementById("proStatus").style.display = "flex";
-    document.getElementById("proGate").style.display = "none";
-    document.getElementById("proContent").style.display = "block";
-}
-
-function generateAccessKey() {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    const seg = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-    return `${ACCESS_KEY_PREFIX}-${seg()}-${seg()}-${seg()}`;
-}
-
-function handlePurchase() {
-    // In production: redirect to Stripe Checkout
-    // For demo: simulate instant purchase
-    const key = generateAccessKey();
-    document.getElementById("accessKeyDisplay").textContent = key;
-    document.getElementById("successModal").style.display = "flex";
-    unlockPro(key);
-}
-
-function showAccessKeyModal() {
-    document.getElementById("accessKeyModal").style.display = "flex";
-}
-
-function closeAccessKeyModal() {
-    document.getElementById("accessKeyModal").style.display = "none";
-    document.getElementById("accessKeyError").style.display = "none";
-}
-
-function verifyAccessKey() {
-    const input = document.getElementById("accessKeyInput").value.trim().toUpperCase();
-    if (input.startsWith(ACCESS_KEY_PREFIX + "-") && input.length >= 16) {
-        unlockPro(input);
-        closeAccessKeyModal();
-    } else {
-        document.getElementById("accessKeyError").style.display = "block";
-    }
-}
-
-function closeSuccessModal() {
-    document.getElementById("successModal").style.display = "none";
+    return true;
 }
 
 // --- Wait Time Engine ---
@@ -202,7 +150,6 @@ function initTracker() {
     renderPopularAirports();
     setupSearch();
     startLiveUpdates();
-    if (isPro()) showProUI();
 }
 
 function renderPopularAirports() {
@@ -360,9 +307,9 @@ function updateDashboard() {
     document.getElementById("lastUpdated").textContent = new Date().toLocaleTimeString();
 }
 
-// --- Spike Detection & Urgency Alerts (Pro) ---
+// --- Spike Detection & Urgency Alerts ---
 function checkForSpikes() {
-    if (!selectedAirport || !isPro()) {
+    if (!selectedAirport) {
         document.getElementById("urgencyBanner").style.display = "none";
         return;
     }
@@ -409,9 +356,9 @@ function renderForecast() {
     }
 }
 
-// --- Safe Zone / Risk Zone Prediction (Pro) ---
+// --- Safe Zone / Risk Zone Prediction ---
 function calculateArrival() {
-    if (!selectedAirport || !isPro()) return;
+    if (!selectedAirport) return;
 
     const dateStr = document.getElementById("flightDate").value;
     const timeStr = document.getElementById("flightTime").value;
@@ -506,8 +453,6 @@ function calculateArrival() {
 
 // --- Dynamic "Leave Now" Alert ---
 function checkDynamicUrgency(flightDateTime, safeTotalMin, riskTotalMin, driveTime) {
-    if (!isPro()) return;
-
     const now = new Date();
     const safeDeadline = new Date(flightDateTime.getTime() - (safeTotalMin + driveTime) * 60 * 1000);
     const riskDeadline = new Date(flightDateTime.getTime() - (riskTotalMin + driveTime) * 60 * 1000);
@@ -553,7 +498,7 @@ function startPredictionRefresh() {
     }, 1000);
 
     predictionInterval = setInterval(() => {
-        if (selectedAirport && isPro()) {
+        if (selectedAirport) {
             calculateArrival();
         }
     }, 120000); // 2 minutes
