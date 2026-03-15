@@ -93,6 +93,27 @@ export default {
       return handleHistoryGet(url, env, corsHeaders);
     }
 
+    // Route: debug — check cron status and force a snapshot
+    if (url.pathname === "/debug" && request.method === "GET") {
+      const code = (url.searchParams.get("airport") || "AUS").toUpperCase();
+      const tsaData = await fetchTSADirect(code);
+      const snapshot = tsaData ? extractWaitSnapshot(tsaData) : null;
+      if (snapshot && tsaData) {
+        await saveHistorySnapshot(code, tsaData, env);
+      }
+      const kvKey = `history:${code}`;
+      const stored = await env.CROWD_KV.get(kvKey, "json") || [];
+      return jsonResponse({
+        airport: code,
+        tsaDataReceived: !!tsaData,
+        tsaDataKeys: tsaData ? Object.keys(tsaData) : null,
+        tsaDataSample: tsaData ? JSON.stringify(tsaData).substring(0, 500) : null,
+        snapshotExtracted: snapshot,
+        historyPoints: stored.length,
+        lastPoint: stored.length > 0 ? stored[stored.length - 1] : null,
+      }, 200, corsHeaders);
+    }
+
     // Route: crowd reports
     if (url.pathname === "/crowd") {
       if (request.method === "POST") {
@@ -324,17 +345,45 @@ async function handleCrowdSubmit(request, env, corsHeaders) {
 
 // Parse TSA response and extract average wait times for a snapshot
 function extractWaitSnapshot(tsaData) {
-  const records = Array.isArray(tsaData) ? tsaData : (tsaData.WaitTimes || tsaData.waitTimes || [tsaData]);
+  if (!tsaData) return null;
+
+  // Handle various TSA response formats
+  let records;
+  if (Array.isArray(tsaData)) {
+    records = tsaData;
+  } else if (tsaData.WaitTimes) {
+    records = Array.isArray(tsaData.WaitTimes) ? tsaData.WaitTimes : [tsaData.WaitTimes];
+  } else if (tsaData.waitTimes) {
+    records = Array.isArray(tsaData.waitTimes) ? tsaData.waitTimes : [tsaData.waitTimes];
+  } else if (tsaData.data) {
+    // Wrapped format from our own proxy
+    return extractWaitSnapshot(tsaData.data);
+  } else if (tsaData.WaitTime || tsaData.wait_time || tsaData.CheckpointName) {
+    records = [tsaData];
+  } else {
+    // Try all values of object as potential records
+    const vals = Object.values(tsaData);
+    if (vals.length > 0 && typeof vals[0] === "object") {
+      records = vals;
+    } else {
+      return null;
+    }
+  }
+
   if (!records || records.length === 0) return null;
 
   let totalStd = 0, countStd = 0, totalPc = 0, countPc = 0;
   for (const record of records) {
+    if (!record || typeof record !== "object") continue;
     const waitMin = parseInt(
       record.WaitTime || record.wait_time || record.estimated_wait ||
       record.mins || record.waittime || record.minutes || 0
     );
+    if (isNaN(waitMin)) continue;
+
+    const checkpoint = record.CheckpointName || record.checkpoint || record.CheckPoint || "";
     const isPrecheck = (record.PreCheck === "true" || record.precheck === true ||
-      ((record.CheckpointName || record.checkpoint || "").toLowerCase().includes("precheck")));
+      (typeof checkpoint === "string" && checkpoint.toLowerCase().includes("precheck")));
 
     if (isPrecheck) {
       totalPc += waitMin;
