@@ -5,6 +5,7 @@
 //
 // Routes:
 //   GET  /?airport=LAX           → TSA wait times
+//   GET  /history?airport=LAX    → 24h wait time history (auto-recorded)
 //   GET  /crowd?airport=LAX      → Get crowd reports for airport
 //   POST /crowd                  → Submit a crowd report
 //
@@ -15,6 +16,9 @@ const TSA_BASE = "https://apps.tsa.dhs.gov/MyTSAWebService";
 const CACHE_TTL = 300; // 5 minutes
 const CROWD_REPORT_TTL = 4 * 60 * 60; // 4 hours in seconds
 const MAX_REPORTS_PER_AIRPORT = 200;
+const HISTORY_TTL = 24 * 60 * 60; // 24 hours in seconds
+const HISTORY_MIN_INTERVAL = 2 * 60 * 1000; // 2 min between snapshots
+const MAX_HISTORY_POINTS = 720; // 24h at 2-min intervals
 
 // Allowed origins for CORS
 const ALLOWED_ORIGINS = [
@@ -49,6 +53,11 @@ export default {
     // Handle CORS preflight
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders });
+    }
+
+    // Route: wait time history
+    if (url.pathname === "/history" && request.method === "GET") {
+      return handleHistoryGet(url, env, corsHeaders);
     }
 
     // Route: crowd reports
@@ -129,13 +138,17 @@ async function handleTSAFetch(url, corsHeaders, request, ctx) {
       parsed = { raw: rawData, airport: code };
     }
 
-    const response = jsonResponse({
+    const responseData = {
       airport: code,
       timestamp: new Date().toISOString(),
       source: "TSA MyTSA Web Service (apps.tsa.dhs.gov)",
       data: parsed,
-    }, 200, corsHeaders);
+    };
 
+    // Save snapshot to history (non-blocking)
+    ctx.waitUntil(saveHistorySnapshot(code, parsed, env));
+
+    const response = jsonResponse(responseData, 200, corsHeaders);
     response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
     ctx.waitUntil(cache.put(cacheKey, response.clone()));
     return response;
@@ -240,5 +253,93 @@ async function handleCrowdSubmit(request, env, corsHeaders) {
 
   } catch (err) {
     return jsonResponse({ error: "Failed to save report", details: err.message }, 500, corsHeaders);
+  }
+}
+
+// ============================================
+// WAIT TIME HISTORY (Cloudflare KV)
+// Auto-saved on every TSA fetch, served to all users
+// ============================================
+
+// Parse TSA response and extract average wait times for a snapshot
+function extractWaitSnapshot(tsaData) {
+  const records = Array.isArray(tsaData) ? tsaData : (tsaData.WaitTimes || tsaData.waitTimes || [tsaData]);
+  if (!records || records.length === 0) return null;
+
+  let totalStd = 0, countStd = 0, totalPc = 0, countPc = 0;
+  for (const record of records) {
+    const waitMin = parseInt(
+      record.WaitTime || record.wait_time || record.estimated_wait ||
+      record.mins || record.waittime || record.minutes || 0
+    );
+    const isPrecheck = (record.PreCheck === "true" || record.precheck === true ||
+      ((record.CheckpointName || record.checkpoint || "").toLowerCase().includes("precheck")));
+
+    if (isPrecheck) {
+      totalPc += waitMin;
+      countPc++;
+    } else {
+      totalStd += waitMin;
+      countStd++;
+    }
+  }
+
+  if (countStd === 0 && countPc === 0) return null;
+
+  return {
+    std: countStd > 0 ? Math.round(totalStd / countStd) : 0,
+    pc: countPc > 0 ? Math.round(totalPc / countPc) : (countStd > 0 ? Math.max(1, Math.round((totalStd / countStd) * 0.35)) : 0),
+  };
+}
+
+async function saveHistorySnapshot(airportCode, tsaData, env) {
+  try {
+    const snapshot = extractWaitSnapshot(tsaData);
+    if (!snapshot) return;
+
+    const kvKey = `history:${airportCode}`;
+    const stored = await env.CROWD_KV.get(kvKey, "json") || [];
+
+    // Don't save if last snapshot is too recent
+    if (stored.length > 0 && Date.now() - stored[stored.length - 1].t < HISTORY_MIN_INTERVAL) return;
+
+    const cutoff = Date.now() - HISTORY_TTL * 1000;
+    const active = stored.filter(p => p.t > cutoff);
+
+    active.push({ t: Date.now(), std: snapshot.std, pc: snapshot.pc });
+
+    // Cap at max points
+    const trimmed = active.slice(-MAX_HISTORY_POINTS);
+
+    await env.CROWD_KV.put(kvKey, JSON.stringify(trimmed), {
+      expirationTtl: HISTORY_TTL + 3600, // extra hour buffer
+    });
+  } catch {
+    // Non-critical, fail silently
+  }
+}
+
+// GET /history?airport=LAX — returns 24h wait time history
+async function handleHistoryGet(url, env, corsHeaders) {
+  const airportCode = url.searchParams.get("airport");
+  if (!airportCode || !/^[A-Z]{3}$/i.test(airportCode)) {
+    return jsonResponse({ error: "Invalid airport code" }, 400, corsHeaders);
+  }
+
+  const code = airportCode.toUpperCase();
+  const kvKey = `history:${code}`;
+
+  try {
+    const stored = await env.CROWD_KV.get(kvKey, "json") || [];
+    const cutoff = Date.now() - HISTORY_TTL * 1000;
+    const points = stored.filter(p => p.t > cutoff);
+
+    return jsonResponse({
+      airport: code,
+      points,
+      count: points.length,
+    }, 200, corsHeaders);
+  } catch (err) {
+    return jsonResponse({ error: "Failed to read history", details: err.message }, 500, corsHeaders);
   }
 }
