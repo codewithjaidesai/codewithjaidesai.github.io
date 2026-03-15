@@ -1,10 +1,12 @@
-# TSA Wait Times Proxy (Cloudflare Worker)
+# AirQ Cloudflare Worker — TSA Proxy + Crowd Reports
 
-This Cloudflare Worker proxies requests to the official **TSA MyTSA Web Service** (`apps.tsa.dhs.gov`) and adds CORS headers so the AirQ static site can fetch real TSA data.
+This worker handles two things:
+1. **TSA Proxy** — proxies the official TSA MyTSA Web Service with CORS headers
+2. **Crowd Reports** — shared crowdsourced wait times via Cloudflare KV
 
 ## Setup
 
-1. Install Wrangler (Cloudflare's CLI):
+1. Install Wrangler:
    ```bash
    npm install -g wrangler
    ```
@@ -14,38 +16,46 @@ This Cloudflare Worker proxies requests to the official **TSA MyTSA Web Service*
    wrangler login
    ```
 
-3. Deploy:
+3. Create the KV namespace for crowd reports:
    ```bash
    cd worker
-   npx wrangler deploy
+   npx wrangler kv namespace create CROWD_KV
    ```
+   Copy the generated `id` into `wrangler.toml`.
 
-4. After deploy, you'll get a URL like:
-   ```
-   https://tsa-proxy.YOUR_SUBDOMAIN.workers.dev
+4. Deploy:
+   ```bash
+   npx wrangler deploy
    ```
 
 5. Update `TSA_PROXY_URL` in `app.js` with your worker URL.
 
-## Usage
+## API
 
+### TSA Wait Times
 ```
-GET https://tsa-proxy.YOUR_SUBDOMAIN.workers.dev?airport=LAX
+GET /?airport=LAX
+→ { airport, timestamp, source, data }
 ```
 
-Returns:
-```json
-{
-  "airport": "LAX",
-  "timestamp": "2026-03-15T...",
-  "source": "TSA MyTSA Web Service (apps.tsa.dhs.gov)",
-  "data": { ... }
-}
+### Get Crowd Reports
+```
+GET /crowd?airport=LAX
+→ { airport, reports: [...], count }
+```
+
+### Submit Crowd Report
+```
+POST /crowd
+Content-Type: application/json
+{ "airportCode": "LAX", "terminal": "Terminal 1", "type": "standard", "waitMinutes": 15 }
+→ { success, report, totalReports }
 ```
 
 ## Free Tier Limits
 
-Cloudflare Workers free tier: **100,000 requests/day** — more than enough for a personal project.
+- **Workers**: 100,000 requests/day
+- **KV**: 100,000 reads/day, 1,000 writes/day (plenty for crowd reports)
 
 ## Local Development
 
@@ -53,5 +63,3 @@ Cloudflare Workers free tier: **100,000 requests/day** — more than enough for 
 cd worker
 npx wrangler dev
 ```
-
-This starts a local server at `http://localhost:8787` for testing.
