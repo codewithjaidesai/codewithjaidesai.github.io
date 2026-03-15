@@ -12,6 +12,9 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Disclaimer Link (top-right) -->
+    <a href="#disclaimer" class="disclaimer-link" onclick="document.getElementById('disclaimer').scrollIntoView({behavior:'smooth'});return false;">Disclaimer</a>
+
     <!-- Search-First Hero -->
     <header class="hero" id="hero">
         <div class="hero-bg"><div class="hero-grid"></div></div>
@@ -166,30 +169,39 @@
                     <!-- Crowdsource Section -->
                     <div class="crowdsource-section" id="crowdsourceSection">
                         <div class="crowdsource-header">
-                            <h3>📡 Data Source</h3>
-                            <div class="data-source-toggle">
-                                <button class="data-source-btn active" id="btnTSA" onclick="setDataSource('tsa')">TSA Live</button>
-                                <button class="data-source-btn" id="btnCrowd" onclick="setDataSource('crowd')">Crowdsourced</button>
+                            <div class="crowdsource-header-left">
+                                <h3>📡 Data Source</h3>
+                                <div class="data-source-toggle">
+                                    <button class="data-source-btn active" id="btnTSA" onclick="setDataSource('tsa')">TSA Live</button>
+                                    <button class="data-source-btn" id="btnCrowd" onclick="setDataSource('crowd')">Crowdsourced</button>
+                                </div>
                             </div>
+                            <button class="btn-report-toggle" id="btnReportToggle" onclick="toggleReportForm()">
+                                <span class="report-toggle-icon">+</span> Report Wait Time
+                            </button>
                         </div>
-                        <div class="crowdsource-report">
-                            <span style="font-size: 0.85rem; color: var(--text-muted); margin-right: 4px;">Report wait time:</span>
-                            <div class="crowd-input-group">
-                                <label>Security</label>
-                                <input type="number" id="crowdWaitMin" min="0" max="120" placeholder="min">
+                        <div class="crowdsource-report" id="crowdReportForm" style="display: none;">
+                            <div class="crowd-report-row">
+                                <div class="crowd-input-group">
+                                    <label>Security wait</label>
+                                    <div class="crowd-min-wrap">
+                                        <input type="number" id="crowdWaitMin" min="0" max="120" placeholder="0">
+                                        <span class="crowd-min-label">min</span>
+                                    </div>
+                                </div>
+                                <div class="crowd-input-group">
+                                    <label>Type</label>
+                                    <select id="crowdType">
+                                        <option value="standard">Standard</option>
+                                        <option value="precheck">PreCheck</option>
+                                    </select>
+                                </div>
+                                <div class="crowd-input-group" id="crowdTerminalGroup">
+                                    <label>Terminal</label>
+                                    <select id="crowdTerminal"></select>
+                                </div>
+                                <button class="btn-crowd" onclick="submitCrowdReport()">Submit</button>
                             </div>
-                            <div class="crowd-input-group">
-                                <label>Type</label>
-                                <select id="crowdType">
-                                    <option value="standard">Standard</option>
-                                    <option value="precheck">PreCheck</option>
-                                </select>
-                            </div>
-                            <div class="crowd-input-group" id="crowdTerminalGroup">
-                                <label>Terminal</label>
-                                <select id="crowdTerminal"></select>
-                            </div>
-                            <button class="btn-crowd" onclick="submitCrowdReport()">Submit</button>
                         </div>
                         <div class="crowd-thanks" id="crowdThanks">Thanks! Your report helps other travelers.</div>
                         <div class="crowd-stats" id="crowdStats">
@@ -199,9 +211,9 @@
                         </div>
                     </div>
 
-                    <!-- 24h Forecast (Free) -->
+                    <!-- Live Checkpoint Comparison -->
                     <div class="forecast-section">
-                        <h3>📊 24-Hour Wait Time Forecast</h3>
+                        <h3>📊 Live Wait Times by Checkpoint</h3>
                         <div class="forecast-chart" id="forecastChart"></div>
                     </div>
                 </div>
@@ -211,7 +223,7 @@
     </section>
 
     <!-- Disclaimer -->
-    <section class="disclaimer-section">
+    <section class="disclaimer-section" id="disclaimer">
         <div class="container">
             <div class="disclaimer-box">
                 <h3>⚠️ Important Disclaimer — Please Read</h3>
