@@ -336,26 +336,33 @@ body {
 .refresh-icon { animation: spin 3s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-/* Forecast / Checkpoint Comparison */
+/* 24-Hour History Timeline */
 .forecast-section {
     background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
     padding: 32px; margin-bottom: 32px;
 }
 .forecast-section h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 24px; }
-.forecast-chart { display: flex; align-items: flex-end; gap: 24px; min-height: 200px; padding: 0 0 30px; position: relative; justify-content: center; flex-wrap: wrap; }
-.forecast-checkpoint { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.forecast-checkpoint-bars { display: flex; align-items: flex-end; gap: 6px; height: 160px; }
-.forecast-checkpoint-name { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-align: center; max-width: 100px; word-wrap: break-word; }
-.forecast-bar-wrap {
-    display: flex; flex-direction: column; align-items: center;
-    height: 100%; justify-content: flex-end; position: relative; min-width: 28px;
+.forecast-chart {
+    display: flex; align-items: flex-end; gap: 2px; height: 200px;
+    padding: 0 0 28px; position: relative; overflow-x: auto; -webkit-overflow-scrolling: touch;
 }
-.forecast-bar { width: 28px; border-radius: 4px 4px 0 0; transition: height 0.5s ease; cursor: pointer; }
+.forecast-bar-wrap {
+    flex: 1; min-width: 6px; display: flex; flex-direction: column; align-items: center;
+    height: 100%; justify-content: flex-end; position: relative;
+}
+.forecast-bar {
+    width: 100%; max-width: 20px; min-width: 4px;
+    border-radius: 3px 3px 0 0; transition: height 0.5s ease; cursor: pointer;
+}
 .forecast-bar:hover { opacity: 0.8; }
-.forecast-bar-label { position: absolute; bottom: -18px; font-size: 0.55rem; color: var(--text-dim); white-space: nowrap; font-family: 'JetBrains Mono', monospace; }
+.forecast-bar-label {
+    position: absolute; bottom: -22px; font-size: 0.55rem; color: var(--text-dim);
+    white-space: nowrap; font-family: 'JetBrains Mono', monospace;
+}
 .forecast-bar-value {
-    position: absolute; top: -18px; font-size: 0.65rem; font-weight: 600;
+    position: absolute; top: -18px; font-size: 0.6rem; font-weight: 600;
     color: var(--text-muted); font-family: 'JetBrains Mono', monospace; opacity: 0; transition: opacity 0.2s;
+    white-space: nowrap;
 }
 .forecast-bar-wrap:hover .forecast-bar-value { opacity: 1; }
 

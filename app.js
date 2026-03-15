@@ -18,6 +18,32 @@ let tsaWaitData = {}; // { airportCode: { waitTimes, timestamp, source } }
 // Deploy: cd worker && npx wrangler deploy
 const TSA_PROXY_URL = "https://tsa-proxy.jaidesai-tsa.workers.dev";
 
+// --- Wait Time History (server-side via Cloudflare KV, shared across all users) ---
+let cachedHistory = {}; // { airportCode: { points, fetchedAt } }
+
+async function fetchWaitHistory(airportCode) {
+    // Use cache if fetched within last 60 seconds
+    const cached = cachedHistory[airportCode];
+    if (cached && Date.now() - cached.fetchedAt < 60000) return cached.points;
+
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        const response = await fetch(
+            `${TSA_PROXY_URL}/history?airport=${airportCode}`,
+            { signal: controller.signal }
+        );
+        clearTimeout(timeout);
+        if (!response.ok) return cached ? cached.points : [];
+        const result = await response.json();
+        const points = result.points || [];
+        cachedHistory[airportCode] = { points, fetchedAt: Date.now() };
+        return points;
+    } catch {
+        return cached ? cached.points : [];
+    }
+}
+
 // --- All features are free ---
 function isPro() {
     return true;
@@ -615,54 +641,53 @@ function checkForSpikes() {
             : "Plan for extra time.");
 }
 
-// --- Forecast ---
-// Shows current live TSA wait time snapshot per terminal (real data only)
-function renderForecast() {
+// --- 24-Hour History ---
+// Shows real recorded wait times from the server (shared across all users)
+async function renderForecast() {
     if (!selectedAirport) return;
     const chart = document.getElementById("forecastChart");
-    const cached = tsaWaitData[selectedAirport.code];
 
-    if (!cached || !cached.waitTimes) {
-        chart.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px 0;">Forecast unavailable — no real-time data for this airport.</div>';
+    chart.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px 0;">Loading history…</div>';
+
+    const history = await fetchWaitHistory(selectedAirport.code);
+
+    // Double-check airport didn't change during fetch
+    if (!selectedAirport) return;
+
+    if (history.length === 0) {
+        chart.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px 0;">No history recorded yet for this airport. Data is recorded automatically every ~2 minutes when anyone checks this airport.</div>';
         return;
     }
 
-    // Show real wait times per checkpoint/terminal as a bar chart
-    const entries = Object.entries(cached.waitTimes);
-    if (entries.length === 0) {
-        chart.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px 0;">No checkpoint data available.</div>';
-        return;
-    }
+    const maxWait = Math.max(40, ...history.map(p => p.std));
+    const timeFmt = (ts) => new Date(ts).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 
-    const maxWait = Math.max(60, ...entries.map(([, w]) => w.standardSecurity));
-    const bars = entries.map(([name, wt]) => {
-        const stdHeight = Math.max(4, (wt.standardSecurity / maxWait) * 100);
-        const pcHeight = Math.max(4, (wt.precheckSecurity / maxWait) * 100);
-        const stdColor = getBarColor(wt.standardSecurity);
-        const pcColor = getBarColor(wt.precheckSecurity);
-        const shortName = name.length > 12 ? name.substring(0, 11) + '…' : name;
+    // Decide how many labels to show based on data density
+    const showEveryNth = history.length <= 12 ? 1 : history.length <= 24 ? 2 : Math.ceil(history.length / 12);
+
+    const bars = history.map((point, i) => {
+        const stdHeight = Math.max(4, (point.std / maxWait) * 100);
+        const color = getBarColor(point.std);
+        const isLast = i === history.length - 1;
+        const showLabel = i % showEveryNth === 0 || isLast;
+        const label = showLabel ? timeFmt(point.t) : '';
 
         return `
-            <div class="forecast-checkpoint">
-                <div class="forecast-checkpoint-bars">
-                    <div class="forecast-bar-wrap">
-                        <div class="forecast-bar-value">${wt.standardSecurity}m</div>
-                        <div class="forecast-bar" style="height: ${stdHeight}%; background: ${stdColor};"></div>
-                        <div class="forecast-bar-label">Std</div>
-                    </div>
-                    <div class="forecast-bar-wrap">
-                        <div class="forecast-bar-value">${wt.precheckSecurity}m</div>
-                        <div class="forecast-bar" style="height: ${pcHeight}%; background: ${pcColor}; opacity: 0.7;"></div>
-                        <div class="forecast-bar-label">Pre✓</div>
-                    </div>
-                </div>
-                <div class="forecast-checkpoint-name">${shortName}</div>
+            <div class="forecast-bar-wrap" title="${timeFmt(point.t)}: ${point.std}min std / ${point.pc}min pre✓">
+                <div class="forecast-bar-value">${point.std}m</div>
+                <div class="forecast-bar" style="height: ${stdHeight}%; background: ${color};${isLast ? ' outline: 2px solid var(--primary); outline-offset: 1px;' : ''}"></div>
+                <div class="forecast-bar-label"${isLast ? ' style="color: var(--primary); font-weight: 700;"' : ''}>${isLast ? 'Now' : label}</div>
             </div>
         `;
     });
 
-    const time = new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
-    chart.innerHTML = bars.join("") + `<div style="width:100%; text-align:center; margin-top:12px; font-size:0.75rem; color:var(--text-dim);">Live TSA data as of ${time} · Standard vs PreCheck per checkpoint</div>`;
+    const oldest = timeFmt(history[0].t);
+    const newest = timeFmt(history[history.length - 1].t);
+    const dataPoints = history.length;
+    const spanHours = Math.round((history[history.length - 1].t - history[0].t) / (1000 * 60 * 60) * 10) / 10;
+    chart.innerHTML = bars.join("") +
+        `<div style="width:100%; text-align:center; margin-top:16px; font-size:0.72rem; color:var(--text-dim);">` +
+        `${dataPoints} data point${dataPoints > 1 ? 's' : ''} over ${spanHours}h (${oldest} – ${newest}) · Shared across all users · Auto-updates every ~2 min</div>`;
 }
 
 // --- Safe Zone / Risk Zone Prediction ---
