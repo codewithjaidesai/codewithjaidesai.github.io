@@ -149,7 +149,19 @@ function getTrendIcon(current, previous) {
 function initTracker() {
     renderPopularAirports();
     setupSearch();
+    populateAirlineDropdown();
     startLiveUpdates();
+}
+
+function populateAirlineDropdown() {
+    const select = document.getElementById("airlineSelect");
+    if (!select || typeof AIRLINES === "undefined") return;
+    AIRLINES.forEach(a => {
+        const opt = document.createElement("option");
+        opt.value = a.code;
+        opt.textContent = a.name;
+        select.appendChild(opt);
+    });
 }
 
 function renderPopularAirports() {
@@ -363,6 +375,7 @@ function calculateArrival() {
     const dateStr = document.getElementById("flightDate").value;
     const timeStr = document.getElementById("flightTime").value;
     const ticketType = document.getElementById("ticketType").value;
+    const airlineCode = document.getElementById("airlineSelect").value;
 
     if (!dateStr || !timeStr) {
         alert("Please enter both flight date and departure time.");
@@ -385,7 +398,18 @@ function calculateArrival() {
     const flightHour = flightDateTime.getHours();
     const wt = generateWaitTimes(selectedAirport, flightHour);
     const securityWait = ticketType === "precheck" ? wt.precheckSecurity : wt.standardSecurity;
-    const checkinWait = wt.checkin;
+
+    // Apply airline-specific check-in multiplier
+    let airlineMult = 1.0;
+    let airlineName = "Average";
+    if (airlineCode && typeof AIRLINES !== "undefined") {
+        const airline = AIRLINES.find(a => a.code === airlineCode);
+        if (airline) {
+            airlineMult = airline.checkinMult;
+            airlineName = airline.name;
+        }
+    }
+    const checkinWait = Math.max(2, Math.round(wt.checkin * airlineMult));
 
     // Component times
     const parkingAndWalk = selectedAirport.size === "mega" ? 20 :
@@ -434,7 +458,7 @@ function calculateArrival() {
     // Breakdown
     document.getElementById("breakdownGrid").innerHTML = `
         <div class="breakdown-row"><span>Security (${ticketType === "precheck" ? "PreCheck" : "Standard"})</span><span class="breakdown-safe">~${securityWait} min</span><span class="breakdown-risk">~${riskSecurityWait} min</span></div>
-        <div class="breakdown-row"><span>Check-in</span><span class="breakdown-safe">~${checkinWait} min</span><span class="breakdown-risk">~${riskCheckin} min</span></div>
+        <div class="breakdown-row"><span>Check-in (${airlineName})</span><span class="breakdown-safe">~${checkinWait} min</span><span class="breakdown-risk">~${riskCheckin} min</span></div>
         <div class="breakdown-row"><span>Parking & Walk</span><span class="breakdown-safe">${parkingAndWalk} min</span><span class="breakdown-risk">${parkingAndWalk} min</span></div>
         <div class="breakdown-row"><span>Boarding Buffer</span><span class="breakdown-safe">${boardingBuffer} min</span><span class="breakdown-risk">${boardingBuffer} min</span></div>
         <div class="breakdown-row"><span>Safety Buffer</span><span class="breakdown-safe">${safeBuffer} min</span><span class="breakdown-risk">${riskBuffer} min</span></div>
