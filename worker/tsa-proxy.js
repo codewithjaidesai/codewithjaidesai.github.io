@@ -93,27 +93,6 @@ export default {
       return handleHistoryGet(url, env, corsHeaders);
     }
 
-    // Route: debug — check cron status and force a snapshot
-    if (url.pathname === "/debug" && request.method === "GET") {
-      const code = (url.searchParams.get("airport") || "AUS").toUpperCase();
-      const tsaData = await fetchTSADirect(code);
-      const snapshot = tsaData ? extractWaitSnapshot(tsaData) : null;
-      if (snapshot && tsaData) {
-        await saveHistorySnapshot(code, tsaData, env);
-      }
-      const kvKey = `history:${code}`;
-      const stored = await env.CROWD_KV.get(kvKey, "json") || [];
-      return jsonResponse({
-        airport: code,
-        tsaDataReceived: !!tsaData,
-        tsaDataKeys: tsaData ? Object.keys(tsaData) : null,
-        tsaDataSample: tsaData ? JSON.stringify(tsaData).substring(0, 500) : null,
-        snapshotExtracted: snapshot,
-        historyPoints: stored.length,
-        lastPoint: stored.length > 0 ? stored[stored.length - 1] : null,
-      }, 200, corsHeaders);
-    }
-
     // Route: crowd reports
     if (url.pathname === "/crowd") {
       if (request.method === "POST") {
@@ -156,6 +135,10 @@ async function fetchTSADirect(code) {
     if (!tsaResponse.ok) return null;
 
     const rawData = await tsaResponse.text();
+    // Detect HTML responses (TSA API sometimes returns homepage HTML)
+    if (rawData.trimStart().startsWith("<!DOCTYPE") || rawData.trimStart().startsWith("<html")) {
+      return null;
+    }
     try {
       return JSON.parse(rawData);
     } catch {
@@ -213,17 +196,40 @@ async function handleTSAFetch(url, corsHeaders, request, ctx) {
     }
 
     const rawData = await tsaResponse.text();
+
+    // Detect HTML responses (TSA API down / returning homepage)
+    const isHtml = rawData.trimStart().startsWith("<!DOCTYPE") || rawData.trimStart().startsWith("<html");
+
+    if (isHtml) {
+      return jsonResponse({
+        airport: code,
+        timestamp: new Date().toISOString(),
+        source: "TSA MyTSA Web Service (apps.tsa.dhs.gov)",
+        tsaAvailable: false,
+        error: "TSA wait time API is currently unavailable. The service may be temporarily down.",
+        data: null,
+      }, 200, corsHeaders);
+    }
+
     let parsed;
     try {
       parsed = JSON.parse(rawData);
     } catch {
-      parsed = { raw: rawData, airport: code };
+      return jsonResponse({
+        airport: code,
+        timestamp: new Date().toISOString(),
+        source: "TSA MyTSA Web Service (apps.tsa.dhs.gov)",
+        tsaAvailable: false,
+        error: "TSA API returned invalid data",
+        data: null,
+      }, 200, corsHeaders);
     }
 
     const responseData = {
       airport: code,
       timestamp: new Date().toISOString(),
       source: "TSA MyTSA Web Service (apps.tsa.dhs.gov)",
+      tsaAvailable: true,
       data: parsed,
     };
 
@@ -430,6 +436,7 @@ async function saveHistorySnapshot(airportCode, tsaData, env) {
 }
 
 // GET /history?airport=LAX — returns 24h wait time history
+// Combines TSA-sourced history with crowd-reported data as fallback
 async function handleHistoryGet(url, env, corsHeaders) {
   const airportCode = url.searchParams.get("airport");
   if (!airportCode || !/^[A-Z]{3}$/i.test(airportCode)) {
@@ -437,12 +444,42 @@ async function handleHistoryGet(url, env, corsHeaders) {
   }
 
   const code = airportCode.toUpperCase();
-  const kvKey = `history:${code}`;
 
   try {
+    // Get TSA-sourced history
+    const kvKey = `history:${code}`;
     const stored = await env.CROWD_KV.get(kvKey, "json") || [];
     const cutoff = Date.now() - HISTORY_TTL * 1000;
-    const points = stored.filter(p => p.t > cutoff);
+    let points = stored.filter(p => p.t > cutoff);
+
+    // If no TSA history, synthesize from crowd reports
+    if (points.length === 0) {
+      const crowdKey = `crowd:${code}`;
+      const crowdData = await env.CROWD_KV.get(crowdKey, "json") || [];
+      const crowdCutoff = Date.now() - HISTORY_TTL * 1000;
+      const recentCrowd = crowdData.filter(r => r.timestamp > crowdCutoff);
+
+      if (recentCrowd.length > 0) {
+        // Group crowd reports by ~10-minute windows
+        const windows = {};
+        for (const r of recentCrowd) {
+          const windowKey = Math.floor(r.timestamp / (10 * 60 * 1000));
+          if (!windows[windowKey]) windows[windowKey] = { std: [], pc: [], t: r.timestamp };
+          if (r.type === "precheck") {
+            windows[windowKey].pc.push(r.waitMinutes);
+          } else {
+            windows[windowKey].std.push(r.waitMinutes);
+          }
+        }
+
+        points = Object.values(windows).map(w => ({
+          t: w.t,
+          std: w.std.length > 0 ? Math.round(w.std.reduce((a, b) => a + b, 0) / w.std.length) : 0,
+          pc: w.pc.length > 0 ? Math.round(w.pc.reduce((a, b) => a + b, 0) / w.pc.length) : 0,
+          src: "crowd",
+        })).sort((a, b) => a.t - b.t);
+      }
+    }
 
     return jsonResponse({
       airport: code,

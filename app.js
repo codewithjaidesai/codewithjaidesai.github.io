@@ -655,7 +655,11 @@ async function renderForecast() {
     if (!selectedAirport) return;
 
     if (history.length === 0) {
-        chart.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px 0;">No history recorded yet for this airport. Data is recorded automatically every ~2 minutes when anyone checks this airport.</div>';
+        const tsaDown = tsaWaitData[selectedAirport.code] === null;
+        const msg = tsaDown
+            ? 'TSA wait time data is currently unavailable (service may be temporarily down). Submit a crowd report below to start building community wait time data for this airport!'
+            : 'No history recorded yet for this airport. Data is recorded automatically every ~2 minutes when anyone checks this airport.';
+        chart.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 40px 0;">${msg}</div>`;
         return;
     }
 
@@ -685,9 +689,11 @@ async function renderForecast() {
     const newest = timeFmt(history[history.length - 1].t);
     const dataPoints = history.length;
     const spanHours = Math.round((history[history.length - 1].t - history[0].t) / (1000 * 60 * 60) * 10) / 10;
+    const isCrowdSourced = history.some(p => p.src === "crowd");
+    const sourceLabel = isCrowdSourced ? "Community-reported data" : "Shared across all users · Auto-updates every ~2 min";
     chart.innerHTML = bars.join("") +
         `<div style="width:100%; text-align:center; margin-top:16px; font-size:0.72rem; color:var(--text-dim);">` +
-        `${dataPoints} data point${dataPoints > 1 ? 's' : ''} over ${spanHours}h (${oldest} – ${newest}) · Shared across all users · Auto-updates every ~2 min</div>`;
+        `${dataPoints} data point${dataPoints > 1 ? 's' : ''} over ${spanHours}h (${oldest} – ${newest}) · ${sourceLabel}</div>`;
 }
 
 // --- Safe Zone / Risk Zone Prediction ---
