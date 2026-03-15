@@ -29,13 +29,15 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; overflow-x: hidden; }
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     background: var(--bg);
     color: var(--text);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
 }
 .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
 
@@ -498,8 +500,80 @@ body {
 }
 .key-note { font-size: 0.8rem !important; color: var(--text-dim) !important; }
 
-/* ---- RESPONSIVE ---- */
-@media (max-width: 768px) {
+/* ---- RESPONSIVE (Mobile First) ---- */
+
+/* Base mobile styles (already applied above as defaults) */
+/* Stack everything vertically on small screens */
+@media (max-width: 480px) {
+    .container { padding: 0 16px; }
+    .hero-search-wrap { padding: 0 16px; }
+    .hero-brand { margin-bottom: 20px; }
+    .hero-logo { font-size: 2rem; }
+    .hero-title { font-size: 1.6rem; }
+    .hero-heading { font-size: 1.1rem; }
+    .hero-tagline { font-size: 0.85rem; margin-bottom: 24px; }
+    .hero-input-wrap { padding: 0 16px !important; }
+    .hero-input-wrap input { font-size: 0.95rem !important; padding: 14px 0 !important; }
+    .hero-popular .popular-card { padding: 6px 10px; font-size: 0.75rem; }
+    .hero-popular .popular-grid { gap: 6px; }
+
+    .tracker-section { padding: 40px 0; }
+    .airport-header-card { flex-direction: column; align-items: flex-start; gap: 10px; padding: 16px 20px; }
+    .airport-info h3 { font-size: 1.1rem; }
+    .airport-meta { align-items: flex-start; }
+
+    .wait-times-grid { grid-template-columns: 1fr; gap: 12px; margin-bottom: 24px; }
+    .wait-card { padding: 18px; }
+    .wait-time { font-size: 2rem; }
+
+    .terminal-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 6px; }
+    .terminal-tab { padding: 6px 10px; font-size: 0.72rem; }
+
+    .prediction-form { flex-direction: column; }
+    .form-group { min-width: 100%; }
+    .pro-content { padding: 20px; }
+    .pro-content h3 { font-size: 1.05rem; }
+    .prediction-desc { font-size: 0.85rem; }
+    .zone-time { font-size: 1.8rem; }
+    .zone-card { padding: 18px; }
+    .breakdown-row { grid-template-columns: 1fr 55px 55px; font-size: 0.72rem; gap: 8px; }
+    .breakdown-header { grid-template-columns: 1fr 55px 55px; gap: 8px; }
+
+    .crowdsource-section { padding: 18px 16px; }
+    .crowdsource-header { flex-direction: column; align-items: stretch; gap: 10px; }
+    .crowdsource-header-left { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .btn-report-toggle { width: 100%; justify-content: center; }
+    .crowd-report-row { flex-direction: column; align-items: stretch; }
+    .crowd-input-group { flex-direction: row; justify-content: space-between; align-items: center; }
+    .crowd-input-group input, .crowd-input-group select { flex: 1; width: auto; }
+    .btn-crowd { width: 100%; }
+    .crowd-stats { flex-direction: column; gap: 6px; }
+
+    .forecast-section { padding: 20px; }
+    .forecast-section h3 { font-size: 1rem; margin-bottom: 16px; }
+    .forecast-chart { gap: 16px; min-height: 160px; }
+    .forecast-checkpoint-bars { height: 120px; }
+    .forecast-bar { width: 22px; }
+    .forecast-bar-label { font-size: 0.5rem; }
+
+    .disclaimer-box { padding: 20px; }
+    .disclaimer-box h3 { font-size: 0.95rem; }
+    .disclaimer-box p, .disclaimer-box li { font-size: 0.8rem; }
+    .disclaimer-final { font-size: 0.78rem !important; }
+
+    .footer { padding: 24px 0; }
+    .footer-content { flex-direction: column; gap: 16px; text-align: center; }
+    .footer-links { justify-content: center; }
+
+    .popular-grid { grid-template-columns: 1fr; }
+
+    .disclaimer-link { top: 10px; right: 12px; font-size: 0.7rem; padding: 5px 10px; }
+    .urgency-banner { flex-direction: column; gap: 8px; padding: 12px 16px; }
+    .urgency-text { font-size: 0.82rem; }
+}
+
+/* Tablets / medium screens */
+@media (min-width: 481px) and (max-width: 768px) {
     .hero-heading { font-size: 1.3rem; }
     .hero-input-wrap input { font-size: 1rem !important; padding: 14px 0 !important; }
     .hero-popular .popular-card { padding: 8px 12px; font-size: 0.8rem; }
@@ -508,18 +582,13 @@ body {
     .prediction-form { flex-direction: column; }
     .form-group { min-width: 100%; }
     .footer-content { flex-direction: column; gap: 16px; text-align: center; }
-    .forecast-bar-label { font-size: 0.5rem; }
     .wait-times-grid { grid-template-columns: 1fr 1fr; }
-    .terminal-tabs { flex-wrap: nowrap; }
+    .terminal-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .crowd-report-row { flex-direction: column; align-items: stretch; }
     .crowd-input-group { flex-direction: row; justify-content: space-between; align-items: center; }
     .crowdsource-header-left { flex-direction: column; align-items: flex-start; gap: 8px; }
     .zone-time { font-size: 2rem; }
-}
-@media (max-width: 480px) {
-    .wait-times-grid { grid-template-columns: 1fr; }
-    .popular-grid { grid-template-columns: 1fr; }
-    .breakdown-row { grid-template-columns: 1fr 60px 60px; font-size: 0.75rem; }
+    .popular-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
 }
 
 ::-webkit-scrollbar { width: 6px; }
