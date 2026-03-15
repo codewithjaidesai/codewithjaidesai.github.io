@@ -232,6 +232,7 @@ async function loadTSAData(airport) {
     if (selectedAirport && selectedAirport.code === airport.code) {
         updateDashboard();
         renderTerminalTabs();
+        renderForecast();
         checkForSpikes();
     }
 }
@@ -615,19 +616,53 @@ function checkForSpikes() {
 }
 
 // --- Forecast ---
+// Shows current live TSA wait time snapshot per terminal (real data only)
 function renderForecast() {
     if (!selectedAirport) return;
     const chart = document.getElementById("forecastChart");
+    const cached = tsaWaitData[selectedAirport.code];
 
-    const wt = getWaitTimes(selectedAirport);
-    if (!wt) {
+    if (!cached || !cached.waitTimes) {
         chart.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px 0;">Forecast unavailable — no real-time data for this airport.</div>';
         return;
     }
 
-    // With real data, we only know the current wait time, not future hours.
-    // Show a message that forecast requires historical data.
-    chart.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px 0;">24-hour forecast requires historical data collection. Current live wait times are shown above.</div>';
+    // Show real wait times per checkpoint/terminal as a bar chart
+    const entries = Object.entries(cached.waitTimes);
+    if (entries.length === 0) {
+        chart.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px 0;">No checkpoint data available.</div>';
+        return;
+    }
+
+    const maxWait = Math.max(60, ...entries.map(([, w]) => w.standardSecurity));
+    const bars = entries.map(([name, wt]) => {
+        const stdHeight = Math.max(4, (wt.standardSecurity / maxWait) * 100);
+        const pcHeight = Math.max(4, (wt.precheckSecurity / maxWait) * 100);
+        const stdColor = getBarColor(wt.standardSecurity);
+        const pcColor = getBarColor(wt.precheckSecurity);
+        const shortName = name.length > 12 ? name.substring(0, 11) + '…' : name;
+
+        return `
+            <div class="forecast-checkpoint">
+                <div class="forecast-checkpoint-bars">
+                    <div class="forecast-bar-wrap">
+                        <div class="forecast-bar-value">${wt.standardSecurity}m</div>
+                        <div class="forecast-bar" style="height: ${stdHeight}%; background: ${stdColor};"></div>
+                        <div class="forecast-bar-label">Std</div>
+                    </div>
+                    <div class="forecast-bar-wrap">
+                        <div class="forecast-bar-value">${wt.precheckSecurity}m</div>
+                        <div class="forecast-bar" style="height: ${pcHeight}%; background: ${pcColor}; opacity: 0.7;"></div>
+                        <div class="forecast-bar-label">Pre✓</div>
+                    </div>
+                </div>
+                <div class="forecast-checkpoint-name">${shortName}</div>
+            </div>
+        `;
+    });
+
+    const time = new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+    chart.innerHTML = bars.join("") + `<div style="width:100%; text-align:center; margin-top:12px; font-size:0.75rem; color:var(--text-dim);">Live TSA data as of ${time} · Standard vs PreCheck per checkpoint</div>`;
 }
 
 // --- Safe Zone / Risk Zone Prediction ---
@@ -851,6 +886,14 @@ function updateDataSourceIndicator() {
 }
 
 // --- Crowdsource UI ---
+
+function toggleReportForm() {
+    const form = document.getElementById("crowdReportForm");
+    const btn = document.getElementById("btnReportToggle");
+    const isOpen = form.style.display !== "none";
+    form.style.display = isOpen ? "none" : "flex";
+    btn.querySelector(".report-toggle-icon").textContent = isOpen ? "+" : "−";
+}
 
 function submitCrowdReport() {
     if (!selectedAirport) return;
