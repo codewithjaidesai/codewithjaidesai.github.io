@@ -135,6 +135,10 @@ async function fetchTSADirect(code) {
     if (!tsaResponse.ok) return null;
 
     const rawData = await tsaResponse.text();
+    // Detect HTML responses (TSA API sometimes returns homepage HTML)
+    if (rawData.trimStart().startsWith("<!DOCTYPE") || rawData.trimStart().startsWith("<html")) {
+      return null;
+    }
     try {
       return JSON.parse(rawData);
     } catch {
@@ -192,17 +196,40 @@ async function handleTSAFetch(url, corsHeaders, request, ctx) {
     }
 
     const rawData = await tsaResponse.text();
+
+    // Detect HTML responses (TSA API down / returning homepage)
+    const isHtml = rawData.trimStart().startsWith("<!DOCTYPE") || rawData.trimStart().startsWith("<html");
+
+    if (isHtml) {
+      return jsonResponse({
+        airport: code,
+        timestamp: new Date().toISOString(),
+        source: "TSA MyTSA Web Service (apps.tsa.dhs.gov)",
+        tsaAvailable: false,
+        error: "TSA wait time API is currently unavailable. The service may be temporarily down.",
+        data: null,
+      }, 200, corsHeaders);
+    }
+
     let parsed;
     try {
       parsed = JSON.parse(rawData);
     } catch {
-      parsed = { raw: rawData, airport: code };
+      return jsonResponse({
+        airport: code,
+        timestamp: new Date().toISOString(),
+        source: "TSA MyTSA Web Service (apps.tsa.dhs.gov)",
+        tsaAvailable: false,
+        error: "TSA API returned invalid data",
+        data: null,
+      }, 200, corsHeaders);
     }
 
     const responseData = {
       airport: code,
       timestamp: new Date().toISOString(),
       source: "TSA MyTSA Web Service (apps.tsa.dhs.gov)",
+      tsaAvailable: true,
       data: parsed,
     };
 
@@ -324,17 +351,45 @@ async function handleCrowdSubmit(request, env, corsHeaders) {
 
 // Parse TSA response and extract average wait times for a snapshot
 function extractWaitSnapshot(tsaData) {
-  const records = Array.isArray(tsaData) ? tsaData : (tsaData.WaitTimes || tsaData.waitTimes || [tsaData]);
+  if (!tsaData) return null;
+
+  // Handle various TSA response formats
+  let records;
+  if (Array.isArray(tsaData)) {
+    records = tsaData;
+  } else if (tsaData.WaitTimes) {
+    records = Array.isArray(tsaData.WaitTimes) ? tsaData.WaitTimes : [tsaData.WaitTimes];
+  } else if (tsaData.waitTimes) {
+    records = Array.isArray(tsaData.waitTimes) ? tsaData.waitTimes : [tsaData.waitTimes];
+  } else if (tsaData.data) {
+    // Wrapped format from our own proxy
+    return extractWaitSnapshot(tsaData.data);
+  } else if (tsaData.WaitTime || tsaData.wait_time || tsaData.CheckpointName) {
+    records = [tsaData];
+  } else {
+    // Try all values of object as potential records
+    const vals = Object.values(tsaData);
+    if (vals.length > 0 && typeof vals[0] === "object") {
+      records = vals;
+    } else {
+      return null;
+    }
+  }
+
   if (!records || records.length === 0) return null;
 
   let totalStd = 0, countStd = 0, totalPc = 0, countPc = 0;
   for (const record of records) {
+    if (!record || typeof record !== "object") continue;
     const waitMin = parseInt(
       record.WaitTime || record.wait_time || record.estimated_wait ||
       record.mins || record.waittime || record.minutes || 0
     );
+    if (isNaN(waitMin)) continue;
+
+    const checkpoint = record.CheckpointName || record.checkpoint || record.CheckPoint || "";
     const isPrecheck = (record.PreCheck === "true" || record.precheck === true ||
-      ((record.CheckpointName || record.checkpoint || "").toLowerCase().includes("precheck")));
+      (typeof checkpoint === "string" && checkpoint.toLowerCase().includes("precheck")));
 
     if (isPrecheck) {
       totalPc += waitMin;
@@ -381,6 +436,7 @@ async function saveHistorySnapshot(airportCode, tsaData, env) {
 }
 
 // GET /history?airport=LAX — returns 24h wait time history
+// Combines TSA-sourced history with crowd-reported data as fallback
 async function handleHistoryGet(url, env, corsHeaders) {
   const airportCode = url.searchParams.get("airport");
   if (!airportCode || !/^[A-Z]{3}$/i.test(airportCode)) {
@@ -388,12 +444,42 @@ async function handleHistoryGet(url, env, corsHeaders) {
   }
 
   const code = airportCode.toUpperCase();
-  const kvKey = `history:${code}`;
 
   try {
+    // Get TSA-sourced history
+    const kvKey = `history:${code}`;
     const stored = await env.CROWD_KV.get(kvKey, "json") || [];
     const cutoff = Date.now() - HISTORY_TTL * 1000;
-    const points = stored.filter(p => p.t > cutoff);
+    let points = stored.filter(p => p.t > cutoff);
+
+    // If no TSA history, synthesize from crowd reports
+    if (points.length === 0) {
+      const crowdKey = `crowd:${code}`;
+      const crowdData = await env.CROWD_KV.get(crowdKey, "json") || [];
+      const crowdCutoff = Date.now() - HISTORY_TTL * 1000;
+      const recentCrowd = crowdData.filter(r => r.timestamp > crowdCutoff);
+
+      if (recentCrowd.length > 0) {
+        // Group crowd reports by ~10-minute windows
+        const windows = {};
+        for (const r of recentCrowd) {
+          const windowKey = Math.floor(r.timestamp / (10 * 60 * 1000));
+          if (!windows[windowKey]) windows[windowKey] = { std: [], pc: [], t: r.timestamp };
+          if (r.type === "precheck") {
+            windows[windowKey].pc.push(r.waitMinutes);
+          } else {
+            windows[windowKey].std.push(r.waitMinutes);
+          }
+        }
+
+        points = Object.values(windows).map(w => ({
+          t: w.t,
+          std: w.std.length > 0 ? Math.round(w.std.reduce((a, b) => a + b, 0) / w.std.length) : 0,
+          pc: w.pc.length > 0 ? Math.round(w.pc.reduce((a, b) => a + b, 0) / w.pc.length) : 0,
+          src: "crowd",
+        })).sort((a, b) => a.t - b.t);
+      }
+    }
 
     return jsonResponse({
       airport: code,
