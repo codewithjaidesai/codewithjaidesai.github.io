@@ -21,7 +21,7 @@
                 <span class="hero-title">AirQ</span>
             </div>
             <h1 class="hero-heading">Airport Security Wait Times</h1>
-            <p class="hero-tagline">Real-time estimates for 100+ US airports</p>
+            <p class="hero-tagline">Live TSA data for 100+ US airports</p>
             <div class="search-box hero-search-box">
                 <div class="search-input-wrap hero-input-wrap">
                     <span class="search-icon">🔍</span>
@@ -168,7 +168,8 @@
                         <div class="crowdsource-header">
                             <h3>📡 Data Source</h3>
                             <div class="data-source-toggle">
-                                <button class="data-source-btn active" id="btnModeled" onclick="setDataSource('modeled')">Modeled</button>
+                                <button class="data-source-btn active" id="btnTSA" onclick="setDataSource('tsa')">TSA Live</button>
+                                <button class="data-source-btn" id="btnModeled" onclick="setDataSource('modeled')">Modeled</button>
                                 <button class="data-source-btn" id="btnCrowd" onclick="setDataSource('crowd')">Crowdsourced</button>
                             </div>
                         </div>
