@@ -1,4 +1,4 @@
-// US Airport Database with terminal data for terminal-level tracking
+// US Airport Database with terminal data
 const AIRPORTS = [
     { code: "ATL", name: "Hartsfield-Jackson Atlanta International", city: "Atlanta, GA", size: "mega", timezone: "America/New_York", terminals: ["Domestic Terminal (N)", "Domestic Terminal (S)", "International Terminal"] },
     { code: "LAX", name: "Los Angeles International", city: "Los Angeles, CA", size: "mega", timezone: "America/Los_Angeles", terminals: ["Terminal 1", "Terminal 2", "Terminal 3", "Terminal 4", "Terminal 5", "Terminal 6", "Terminal 7", "Tom Bradley Intl"] },
@@ -102,3 +102,18 @@ const AIRPORTS = [
 ];
 
 const POPULAR_AIRPORTS = ["ATL", "LAX", "JFK", "ORD", "DFW", "DEN", "SFO", "SEA", "MIA", "LAS", "BOS", "MCO"];
+
+// Major US airlines for check-in/bag drop breakdown
+const AIRLINES = [
+    { code: "AA", name: "American Airlines", checkinMult: 1.0 },
+    { code: "DL", name: "Delta Air Lines", checkinMult: 0.9 },
+    { code: "UA", name: "United Airlines", checkinMult: 1.0 },
+    { code: "WN", name: "Southwest Airlines", checkinMult: 0.75 },
+    { code: "B6", name: "JetBlue Airways", checkinMult: 0.85 },
+    { code: "AS", name: "Alaska Airlines", checkinMult: 0.85 },
+    { code: "NK", name: "Spirit Airlines", checkinMult: 1.1 },
+    { code: "F9", name: "Frontier Airlines", checkinMult: 1.1 },
+    { code: "HA", name: "Hawaiian Airlines", checkinMult: 0.9 },
+    { code: "SY", name: "Sun Country Airlines", checkinMult: 1.0 },
+    { code: "G4", name: "Allegiant Air", checkinMult: 1.05 },
+];
