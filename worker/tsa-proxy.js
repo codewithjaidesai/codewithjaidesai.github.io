@@ -45,7 +45,40 @@ function jsonResponse(data, status, corsHeaders) {
   });
 }
 
+// Top US airports to auto-fetch every 2 minutes via cron
+const POPULAR_AIRPORTS = [
+  "ATL", "LAX", "JFK", "ORD", "DFW", "DEN", "SFO", "SEA",
+  "MIA", "LAS", "BOS", "MCO", "EWR", "CLT", "PHX", "IAH",
+  "MSP", "DTW", "FLL", "BWI", "SLC", "DCA", "SAN", "IAD",
+  "TPA", "AUS", "BNA", "STL", "HNL", "PDX", "OAK", "RDU",
+  "MCI", "CLE", "SMF", "SJC", "IND", "PIT", "CMH", "SAT",
+];
+
 export default {
+  // Cron trigger: auto-fetch TSA data for all popular airports
+  async scheduled(event, env, ctx) {
+    const results = [];
+    // Fetch in batches of 8 to avoid overwhelming TSA API
+    for (let i = 0; i < POPULAR_AIRPORTS.length; i += 8) {
+      const batch = POPULAR_AIRPORTS.slice(i, i + 8);
+      const promises = batch.map(async (code) => {
+        try {
+          const data = await fetchTSADirect(code);
+          if (data) {
+            await saveHistorySnapshot(code, data, env);
+            results.push({ code, ok: true });
+          } else {
+            results.push({ code, ok: false, reason: "no data" });
+          }
+        } catch (err) {
+          results.push({ code, ok: false, reason: err.message });
+        }
+      });
+      await Promise.all(promises);
+    }
+    console.log(`Cron: fetched ${results.filter(r => r.ok).length}/${POPULAR_AIRPORTS.length} airports`);
+  },
+
   async fetch(request, env, ctx) {
     const corsHeaders = getCorsHeaders(request);
     const url = new URL(request.url);
@@ -83,6 +116,34 @@ export default {
 // ============================================
 // TSA WAIT TIMES
 // ============================================
+
+// Direct TSA fetch (used by cron, no CORS/caching overhead)
+async function fetchTSADirect(code) {
+  try {
+    const tsaUrl = `${TSA_BASE}/GetTSOWaitTimes.ashx?ap=${code}&output=json`;
+    let tsaResponse = await fetch(tsaUrl, {
+      headers: { "User-Agent": "AirQ-TSA-Proxy/1.0" },
+    });
+
+    if (!tsaResponse.ok) {
+      const fallbackUrl = `${TSA_BASE}/GetConfirmedWaitTimes.ashx?ap=${code}&output=json`;
+      tsaResponse = await fetch(fallbackUrl, {
+        headers: { "User-Agent": "AirQ-TSA-Proxy/1.0" },
+      });
+    }
+
+    if (!tsaResponse.ok) return null;
+
+    const rawData = await tsaResponse.text();
+    try {
+      return JSON.parse(rawData);
+    } catch {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+}
 
 async function handleTSAFetch(url, corsHeaders, request, ctx) {
   const airportCode = url.searchParams.get("airport");
