@@ -335,7 +335,7 @@ function updateDashboard() {
         status.cls === "moderate" ? "Expect some delays at checkpoints" :
         "Significant delays — arrive early";
 
-    document.getElementById("lastUpdated").textContent = new Date().toLocaleTimeString();
+    updateDataSourceIndicator();
 }
 
 // --- Spike Detection & Urgency Alerts ---
@@ -561,6 +561,10 @@ function startLiveUpdates() {
     if (liveUpdateInterval) clearInterval(liveUpdateInterval);
     liveUpdateInterval = setInterval(() => {
         if (selectedAirport) {
+            // Re-fetch TSA data on each live update cycle
+            if (activeDataSource === "tsa") {
+                loadTSAData(selectedAirport);
+            }
             updateDashboard();
             renderTerminalTabs();
             renderForecast();
@@ -598,14 +602,17 @@ document.addEventListener("click", (e) => {
 // ============================================
 
 // --- Data Source Toggle ---
-let activeDataSource = "modeled"; // "modeled" or "crowd"
+let activeDataSource = "tsa"; // "tsa", "modeled", or "crowd"
+let tsaWaitData = {}; // { airportCode: { data, timestamp } }
 
 function setDataSource(source) {
     activeDataSource = source;
+    document.getElementById("btnTSA").classList.toggle("active", source === "tsa");
     document.getElementById("btnModeled").classList.toggle("active", source === "modeled");
     document.getElementById("btnCrowd").classList.toggle("active", source === "crowd");
     updateDashboard();
     renderForecast();
+    updateDataSourceIndicator();
 }
 
 // --- Crowdsource Storage (localStorage) ---
@@ -757,90 +764,231 @@ function updateCrowdTerminalDropdown() {
     }
 }
 
-// --- Override generateWaitTimes to check crowd data when in crowd mode ---
+// --- Override generateWaitTimes to check TSA/crowd data ---
 const _originalGenerateWaitTimes = generateWaitTimes;
 generateWaitTimes = function(airport, hourOverride, terminalIdx) {
-    // Only use crowd data for current-time queries (no hour override)
-    if (activeDataSource === "crowd" && hourOverride === undefined) {
-        const crowdData = getCrowdWaitTimes(airport, terminalIdx);
-        if (crowdData) return crowdData;
+    // Only use real data for current-time queries (no hour override)
+    if (hourOverride === undefined) {
+        if (activeDataSource === "tsa") {
+            const tsaData = getTSAWaitTimes(airport, terminalIdx);
+            if (tsaData) return tsaData;
+            // Fall through to modeled if TSA data unavailable
+        }
+        if (activeDataSource === "crowd") {
+            const crowdData = getCrowdWaitTimes(airport, terminalIdx);
+            if (crowdData) return crowdData;
+        }
     }
     return _originalGenerateWaitTimes(airport, hourOverride, terminalIdx);
 };
 
-// --- Patch selectAirport to also update crowd UI ---
-const _originalSelectAirport = selectAirport;
-selectAirport = function(airport) {
-    _originalSelectAirport(airport);
-    updateCrowdTerminalDropdown();
-    updateCrowdStats();
-};
+// ============================================
+// TSA REAL DATA — via Cloudflare Worker proxy
+// Fetches real wait times from the official TSA MyTSA Web Service
+// ============================================
 
-// ============================================
-// TSA REAL DATA FETCH (best-effort, free)
-// Uses the publicly available TSA checkpoint wait times.
-// Falls back to modeled data if fetch fails (CORS, etc.)
-// ============================================
+// IMPORTANT: After deploying the Cloudflare Worker, replace this URL
+// Deploy: cd worker && npx wrangler deploy
+const TSA_PROXY_URL = "https://tsa-proxy.YOUR_SUBDOMAIN.workers.dev";
 
 const TSA_CACHE_KEY = "airq_tsa_cache";
-const TSA_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+const TSA_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 async function fetchTSAWaitTimes(airportCode) {
-    // Check cache first
+    // Check localStorage cache first
     try {
         const cache = JSON.parse(localStorage.getItem(TSA_CACHE_KEY) || "{}");
         const cached = cache[airportCode];
         if (cached && Date.now() - cached.timestamp < TSA_CACHE_TTL) {
-            return cached.data;
+            return cached;
         }
     } catch {}
 
-    // Attempt to fetch from TSA's public endpoint
-    // Note: This may be blocked by CORS in browsers. If it fails, we fall back to modeled data.
-    // In production, you'd proxy this through a lightweight serverless function (Cloudflare Worker, Vercel Edge, etc.)
     try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 5000);
+        const timeout = setTimeout(() => controller.abort(), 8000);
 
         const response = await fetch(
-            `https://www.tsawaittimes.com/api/airport/${airportCode}/json`,
-            { signal: controller.signal, mode: "cors" }
+            `${TSA_PROXY_URL}?airport=${airportCode}`,
+            { signal: controller.signal }
         );
         clearTimeout(timeout);
 
         if (!response.ok) return null;
-        const data = await response.json();
+        const result = await response.json();
 
-        // Cache the result
+        if (!result || !result.data) return null;
+
+        // Parse TSA data into our internal format
+        const parsed = parseTSAData(result.data, airportCode);
+        if (!parsed) return null;
+
+        const cacheEntry = {
+            waitTimes: parsed,
+            timestamp: Date.now(),
+            tsaTimestamp: result.timestamp,
+            source: result.source
+        };
+
+        // Save to localStorage cache
         try {
             const cache = JSON.parse(localStorage.getItem(TSA_CACHE_KEY) || "{}");
-            cache[airportCode] = { data, timestamp: Date.now() };
+            cache[airportCode] = cacheEntry;
             localStorage.setItem(TSA_CACHE_KEY, JSON.stringify(cache));
         } catch {}
 
-        return data;
+        return cacheEntry;
     } catch {
-        // CORS blocked or network error — expected for static site
         return null;
     }
 }
 
-// Try to enhance modeled data with real TSA data when available
-async function tryEnhanceWithRealData(airport) {
-    const tsaData = await fetchTSAWaitTimes(airport.code);
-    if (!tsaData || !Array.isArray(tsaData) || tsaData.length === 0) return;
+// Parse TSA API response into our wait time format
+// TSA data can come in different formats depending on the endpoint
+function parseTSAData(data, airportCode) {
+    // Handle array of wait time records
+    const records = Array.isArray(data) ? data : (data.WaitTimes || data.waitTimes || [data]);
+    if (!records || records.length === 0) return null;
 
-    // TSA data format varies — attempt to extract wait times
-    // and display a "Real data available" indicator
-    const indicator = document.getElementById("lastUpdated");
-    if (indicator) {
-        indicator.innerHTML = new Date().toLocaleTimeString() + ' <span style="color: var(--green); font-size: 0.65rem;">TSA DATA</span>';
+    const terminals = {};
+
+    for (const record of records) {
+        // TSA fields vary: WaitTime, wait_time, estimated_wait, mins, etc.
+        const waitMin = parseInt(
+            record.WaitTime || record.wait_time || record.estimated_wait ||
+            record.mins || record.waittime || record.minutes || 0
+        );
+        // Checkpoint / terminal name
+        const checkpoint = record.CheckpointName || record.checkpoint ||
+            record.CheckPoint || record.terminal || record.name || "Main";
+        // PreCheck indicator
+        const isPrecheck = (record.PreCheck === "true" || record.precheck === true ||
+            (checkpoint && checkpoint.toLowerCase().includes("precheck")));
+
+        if (!terminals[checkpoint]) {
+            terminals[checkpoint] = { standard: [], precheck: [] };
+        }
+
+        if (isPrecheck) {
+            terminals[checkpoint].precheck.push(waitMin);
+        } else {
+            terminals[checkpoint].standard.push(waitMin);
+        }
+    }
+
+    // Aggregate per terminal
+    const result = {};
+    for (const [name, data] of Object.entries(terminals)) {
+        const stdWaits = data.standard.length > 0 ? data.standard : [0];
+        const pcWaits = data.precheck.length > 0 ? data.precheck : null;
+
+        const avgStd = Math.round(stdWaits.reduce((a, b) => a + b, 0) / stdWaits.length);
+        const avgPc = pcWaits
+            ? Math.round(pcWaits.reduce((a, b) => a + b, 0) / pcWaits.length)
+            : Math.max(1, Math.round(avgStd * 0.35));
+
+        result[name] = {
+            standardSecurity: Math.max(1, avgStd),
+            precheckSecurity: Math.max(1, avgPc),
+            checkin: Math.max(2, Math.round(avgStd * 0.5)),
+            hasSpike: avgStd > 30,
+            terminalName: name,
+            source: "tsa",
+            reportCount: stdWaits.length + (pcWaits ? pcWaits.length : 0)
+        };
+    }
+
+    return Object.keys(result).length > 0 ? result : null;
+}
+
+// Get TSA-based wait times for a specific terminal
+function getTSAWaitTimes(airport, terminalIdx) {
+    const code = airport.code;
+    const cached = tsaWaitData[code];
+    if (!cached || !cached.waitTimes) return null;
+
+    const tIdx = terminalIdx !== undefined ? terminalIdx : selectedTerminal;
+    const terminalName = airport.terminals[tIdx] || airport.terminals[0];
+
+    // Try exact terminal match first
+    if (cached.waitTimes[terminalName]) {
+        return cached.waitTimes[terminalName];
+    }
+
+    // Try partial match (TSA checkpoint names don't always match exactly)
+    for (const [name, wt] of Object.entries(cached.waitTimes)) {
+        if (name.toLowerCase().includes(terminalName.toLowerCase()) ||
+            terminalName.toLowerCase().includes(name.toLowerCase())) {
+            return wt;
+        }
+    }
+
+    // If only one checkpoint reported, use it for all terminals
+    const keys = Object.keys(cached.waitTimes);
+    if (keys.length === 1) {
+        return cached.waitTimes[keys[0]];
+    }
+
+    // Use average across all checkpoints
+    const all = Object.values(cached.waitTimes);
+    return {
+        standardSecurity: Math.round(all.reduce((s, w) => s + w.standardSecurity, 0) / all.length),
+        precheckSecurity: Math.round(all.reduce((s, w) => s + w.precheckSecurity, 0) / all.length),
+        checkin: Math.round(all.reduce((s, w) => s + w.checkin, 0) / all.length),
+        hasSpike: all.some(w => w.hasSpike),
+        terminalName: terminalName,
+        source: "tsa",
+        reportCount: all.reduce((s, w) => s + w.reportCount, 0)
+    };
+}
+
+// Load TSA data for an airport and refresh dashboard
+async function loadTSAData(airport) {
+    const result = await fetchTSAWaitTimes(airport.code);
+    if (result && result.waitTimes) {
+        tsaWaitData[airport.code] = result;
+        updateDataSourceIndicator();
+        if (activeDataSource === "tsa") {
+            updateDashboard();
+            renderTerminalTabs();
+            checkForSpikes();
+        }
+    } else {
+        // TSA data unavailable — indicate fallback
+        tsaWaitData[airport.code] = null;
+        updateDataSourceIndicator();
     }
 }
 
-// Fire-and-forget real data attempt on airport select
+// Update the data source indicator in the header
+function updateDataSourceIndicator() {
+    const indicator = document.getElementById("lastUpdated");
+    if (!indicator || !selectedAirport) return;
+
+    const time = new Date().toLocaleTimeString();
+
+    if (activeDataSource === "tsa") {
+        const cached = tsaWaitData[selectedAirport.code];
+        if (cached && cached.waitTimes) {
+            const age = Math.round((Date.now() - cached.timestamp) / 60000);
+            const ageText = age < 1 ? "just now" : age + "m ago";
+            indicator.innerHTML = `${time} <span style="color: var(--green); font-size: 0.65rem; font-weight: 600;">TSA LIVE (${ageText})</span>`;
+        } else {
+            indicator.innerHTML = `${time} <span style="color: var(--yellow); font-size: 0.65rem; font-weight: 600;">TSA unavailable — showing modeled</span>`;
+        }
+    } else if (activeDataSource === "crowd") {
+        indicator.innerHTML = `${time} <span style="color: var(--blue, #4da6ff); font-size: 0.65rem;">CROWDSOURCED</span>`;
+    } else {
+        indicator.innerHTML = `${time} <span style="color: var(--text-muted); font-size: 0.65rem;">MODELED</span>`;
+    }
+}
+
+// Patch selectAirport to load TSA data and update crowd UI
 const _patchedSelectAirport = selectAirport;
 selectAirport = function(airport) {
     _patchedSelectAirport(airport);
-    tryEnhanceWithRealData(airport);
+    updateCrowdTerminalDropdown();
+    updateCrowdStats();
+    loadTSAData(airport);
+    updateDataSourceIndicator();
 };
