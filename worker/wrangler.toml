@@ -5,3 +5,13 @@ compatibility_date = "2024-01-01"
 # Free tier: 100,000 requests/day
 # Deploy: npx wrangler deploy
 # Test locally: npx wrangler dev
+
+# KV namespace for shared crowd-reported wait times
+# First create the namespace:
+#   npx wrangler kv namespace create CROWD_KV
+# Then paste the generated id below:
+[[kv_namespaces]]
+binding = "CROWD_KV"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+# For local dev (wrangler dev), also create a preview namespace:
+# preview_id = "REPLACE_WITH_PREVIEW_ID"

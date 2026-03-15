@@ -1,11 +1,20 @@
 // ============================================
-// Cloudflare Worker: TSA Wait Times Proxy
+// Cloudflare Worker: TSA Wait Times Proxy + Crowd Reports (KV)
 // Proxies the official TSA MyTSA Web Service API
-// Deploy: npx wrangler deploy worker/tsa-proxy.js --name tsa-proxy
+// Stores crowd-reported wait times in Cloudflare KV for shared access
+//
+// Routes:
+//   GET  /?airport=LAX           → TSA wait times
+//   GET  /crowd?airport=LAX      → Get crowd reports for airport
+//   POST /crowd                  → Submit a crowd report
+//
+// Deploy: cd worker && npx wrangler deploy
 // ============================================
 
 const TSA_BASE = "https://apps.tsa.dhs.gov/MyTSAWebService";
 const CACHE_TTL = 300; // 5 minutes
+const CROWD_REPORT_TTL = 4 * 60 * 60; // 4 hours in seconds
+const MAX_REPORTS_PER_AIRPORT = 200;
 
 // Allowed origins for CORS
 const ALLOWED_ORIGINS = [
@@ -19,118 +28,217 @@ function getCorsHeaders(request) {
   const allowed = ALLOWED_ORIGINS.some(o => origin.startsWith(o));
   return {
     "Access-Control-Allow-Origin": allowed ? origin : ALLOWED_ORIGINS[0],
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400",
   };
 }
 
+function jsonResponse(data, status, corsHeaders) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const corsHeaders = getCorsHeaders(request);
+    const url = new URL(request.url);
 
     // Handle CORS preflight
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders });
     }
 
-    if (request.method !== "GET") {
-      return new Response(JSON.stringify({ error: "Method not allowed" }), {
-        status: 405,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const url = new URL(request.url);
-    const airportCode = url.searchParams.get("airport");
-
-    if (!airportCode || !/^[A-Z]{3}$/i.test(airportCode)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid airport code. Use 3-letter IATA code (e.g., LAX)." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const code = airportCode.toUpperCase();
-
-    // Check Cloudflare cache
-    const cacheKey = new Request(`https://tsa-cache/${code}`, request);
-    const cache = caches.default;
-    let cached = await cache.match(cacheKey);
-    if (cached) {
-      const resp = new Response(cached.body, cached);
-      Object.entries(corsHeaders).forEach(([k, v]) => resp.headers.set(k, v));
-      return resp;
-    }
-
-    try {
-      // Fetch from official TSA MyTSA API
-      const tsaUrl = `${TSA_BASE}/GetTSOWaitTimes.ashx?ap=${code}&output=json`;
-      const tsaResponse = await fetch(tsaUrl, {
-        headers: { "User-Agent": "AirQ-TSA-Proxy/1.0" },
-        cf: { cacheTtl: CACHE_TTL },
-      });
-
-      if (!tsaResponse.ok) {
-        // Try the confirmed wait times endpoint as fallback
-        const fallbackUrl = `${TSA_BASE}/GetConfirmedWaitTimes.ashx?ap=${code}&output=json`;
-        const fallbackResponse = await fetch(fallbackUrl, {
-          headers: { "User-Agent": "AirQ-TSA-Proxy/1.0" },
-          cf: { cacheTtl: CACHE_TTL },
-        });
-
-        if (!fallbackResponse.ok) {
-          return new Response(
-            JSON.stringify({ error: "TSA API unavailable", status: fallbackResponse.status }),
-            { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        const data = await fallbackResponse.text();
-        return buildResponse(data, code, corsHeaders, cache, cacheKey, ctx);
+    // Route: crowd reports
+    if (url.pathname === "/crowd") {
+      if (request.method === "POST") {
+        return handleCrowdSubmit(request, env, corsHeaders);
       }
-
-      const data = await tsaResponse.text();
-      return buildResponse(data, code, corsHeaders, cache, cacheKey, ctx);
-
-    } catch (err) {
-      return new Response(
-        JSON.stringify({ error: "Failed to reach TSA API", details: err.message }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      if (request.method === "GET") {
+        return handleCrowdGet(url, env, corsHeaders);
+      }
+      return jsonResponse({ error: "Method not allowed" }, 405, corsHeaders);
     }
+
+    // Route: TSA wait times (GET only)
+    if (request.method !== "GET") {
+      return jsonResponse({ error: "Method not allowed" }, 405, corsHeaders);
+    }
+
+    return handleTSAFetch(url, corsHeaders, request, ctx);
   },
 };
 
-function buildResponse(rawData, airportCode, corsHeaders, cache, cacheKey, ctx) {
-  // Try to parse as JSON, normalize the response
-  let parsed;
-  try {
-    parsed = JSON.parse(rawData);
-  } catch {
-    // If not JSON, wrap the raw text
-    parsed = { raw: rawData, airport: airportCode };
+// ============================================
+// TSA WAIT TIMES
+// ============================================
+
+async function handleTSAFetch(url, corsHeaders, request, ctx) {
+  const airportCode = url.searchParams.get("airport");
+
+  if (!airportCode || !/^[A-Z]{3}$/i.test(airportCode)) {
+    return jsonResponse(
+      { error: "Invalid airport code. Use 3-letter IATA code (e.g., LAX)." },
+      400, corsHeaders
+    );
   }
 
-  const response = new Response(
-    JSON.stringify({
-      airport: airportCode,
+  const code = airportCode.toUpperCase();
+
+  // Check Cloudflare cache
+  const cacheKey = new Request(`https://tsa-cache/${code}`, request);
+  const cache = caches.default;
+  const cached = await cache.match(cacheKey);
+  if (cached) {
+    const resp = new Response(cached.body, cached);
+    Object.entries(corsHeaders).forEach(([k, v]) => resp.headers.set(k, v));
+    return resp;
+  }
+
+  try {
+    // Try primary TSA endpoint
+    const tsaUrl = `${TSA_BASE}/GetTSOWaitTimes.ashx?ap=${code}&output=json`;
+    let tsaResponse = await fetch(tsaUrl, {
+      headers: { "User-Agent": "AirQ-TSA-Proxy/1.0" },
+      cf: { cacheTtl: CACHE_TTL },
+    });
+
+    // Fallback to confirmed wait times endpoint
+    if (!tsaResponse.ok) {
+      const fallbackUrl = `${TSA_BASE}/GetConfirmedWaitTimes.ashx?ap=${code}&output=json`;
+      tsaResponse = await fetch(fallbackUrl, {
+        headers: { "User-Agent": "AirQ-TSA-Proxy/1.0" },
+        cf: { cacheTtl: CACHE_TTL },
+      });
+    }
+
+    if (!tsaResponse.ok) {
+      return jsonResponse(
+        { error: "TSA API unavailable", status: tsaResponse.status },
+        502, corsHeaders
+      );
+    }
+
+    const rawData = await tsaResponse.text();
+    let parsed;
+    try {
+      parsed = JSON.parse(rawData);
+    } catch {
+      parsed = { raw: rawData, airport: code };
+    }
+
+    const response = jsonResponse({
+      airport: code,
       timestamp: new Date().toISOString(),
       source: "TSA MyTSA Web Service (apps.tsa.dhs.gov)",
       data: parsed,
-    }),
-    {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
-        "Cache-Control": `public, max-age=${CACHE_TTL}`,
-      },
-    }
-  );
+    }, 200, corsHeaders);
 
-  // Store in Cloudflare edge cache
-  ctx.waitUntil(cache.put(cacheKey, response.clone()));
+    response.headers.set("Cache-Control", `public, max-age=${CACHE_TTL}`);
+    ctx.waitUntil(cache.put(cacheKey, response.clone()));
+    return response;
 
-  return response;
+  } catch (err) {
+    return jsonResponse(
+      { error: "Failed to reach TSA API", details: err.message },
+      502, corsHeaders
+    );
+  }
+}
+
+// ============================================
+// CROWD REPORTS (Cloudflare KV)
+// ============================================
+
+// GET /crowd?airport=LAX — returns recent crowd reports
+async function handleCrowdGet(url, env, corsHeaders) {
+  const airportCode = url.searchParams.get("airport");
+  if (!airportCode || !/^[A-Z]{3}$/i.test(airportCode)) {
+    return jsonResponse({ error: "Invalid airport code" }, 400, corsHeaders);
+  }
+
+  const code = airportCode.toUpperCase();
+  const kvKey = `crowd:${code}`;
+
+  try {
+    const stored = await env.CROWD_KV.get(kvKey, "json");
+    const reports = stored || [];
+
+    // Filter to last 4 hours
+    const cutoff = Date.now() - CROWD_REPORT_TTL * 1000;
+    const recent = reports.filter(r => r.timestamp > cutoff);
+
+    return jsonResponse({
+      airport: code,
+      reports: recent,
+      count: recent.length,
+    }, 200, corsHeaders);
+  } catch (err) {
+    return jsonResponse({ error: "Failed to read reports", details: err.message }, 500, corsHeaders);
+  }
+}
+
+// POST /crowd — submit a new crowd report
+async function handleCrowdSubmit(request, env, corsHeaders) {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Invalid JSON body" }, 400, corsHeaders);
+  }
+
+  const { airportCode, terminal, type, waitMinutes } = body;
+
+  // Validate
+  if (!airportCode || !/^[A-Z]{3}$/i.test(airportCode)) {
+    return jsonResponse({ error: "Invalid airport code" }, 400, corsHeaders);
+  }
+  if (typeof waitMinutes !== "number" || waitMinutes < 0 || waitMinutes > 180) {
+    return jsonResponse({ error: "waitMinutes must be 0-180" }, 400, corsHeaders);
+  }
+  if (!type || !["standard", "precheck"].includes(type)) {
+    return jsonResponse({ error: "type must be 'standard' or 'precheck'" }, 400, corsHeaders);
+  }
+
+  const code = airportCode.toUpperCase();
+  const kvKey = `crowd:${code}`;
+
+  const report = {
+    terminal: terminal || "Main",
+    type,
+    waitMinutes: Math.round(waitMinutes),
+    timestamp: Date.now(),
+    id: crypto.randomUUID(),
+  };
+
+  try {
+    // Read existing reports
+    const stored = await env.CROWD_KV.get(kvKey, "json") || [];
+
+    // Remove expired reports (older than 4 hours)
+    const cutoff = Date.now() - CROWD_REPORT_TTL * 1000;
+    const active = stored.filter(r => r.timestamp > cutoff);
+
+    // Add new report
+    active.push(report);
+
+    // Cap at MAX_REPORTS_PER_AIRPORT
+    const trimmed = active.slice(-MAX_REPORTS_PER_AIRPORT);
+
+    // Write back with expiration (auto-cleanup after 24 hours of no writes)
+    await env.CROWD_KV.put(kvKey, JSON.stringify(trimmed), {
+      expirationTtl: 24 * 60 * 60,
+    });
+
+    return jsonResponse({
+      success: true,
+      report,
+      totalReports: trimmed.length,
+    }, 201, corsHeaders);
+
+  } catch (err) {
+    return jsonResponse({ error: "Failed to save report", details: err.message }, 500, corsHeaders);
+  }
 }
