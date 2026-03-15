@@ -12,6 +12,6 @@ compatibility_date = "2024-01-01"
 # Then paste the generated id below:
 [[kv_namespaces]]
 binding = "CROWD_KV"
-id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+id = "1c48a41315c944eaa9427205f5dadefd"
 # For local dev (wrangler dev), also create a preview namespace:
 # preview_id = "REPLACE_WITH_PREVIEW_ID"
