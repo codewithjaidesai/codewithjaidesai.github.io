@@ -16,7 +16,7 @@ let tsaWaitData = {}; // { airportCode: { waitTimes, timestamp, source } }
 
 // IMPORTANT: After deploying the Cloudflare Worker, replace this URL
 // Deploy: cd worker && npx wrangler deploy
-const TSA_PROXY_URL = "https://tsa-proxy.YOUR_SUBDOMAIN.workers.dev";
+const TSA_PROXY_URL = "https://tsa-proxy.jaidesai-tsa.workers.dev";
 
 // --- All features are free ---
 function isPro() {
