@@ -6,6 +6,10 @@ compatibility_date = "2024-01-01"
 # Deploy: npx wrangler deploy
 # Test locally: npx wrangler dev
 
+# Cron trigger: auto-fetch TSA data for popular airports every 2 minutes
+[triggers]
+crons = ["*/2 * * * *"]
+
 # KV namespace for shared crowd-reported wait times
 # First create the namespace:
 #   npx wrangler kv namespace create CROWD_KV
