@@ -190,7 +190,17 @@ function setupSearch() {
     const results = document.getElementById("searchResults");
     input.addEventListener("input", () => {
         const q = input.value.trim().toLowerCase();
-        if (q.length < 1) { results.style.display = "none"; return; }
+        if (q.length < 1) {
+            results.style.display = "none";
+            // Restore hero if search cleared
+            if (selectedAirport) {
+                selectedAirport = null;
+                document.getElementById("hero").classList.remove("hero-collapsed");
+                document.getElementById("airportDashboard").style.display = "none";
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            }
+            return;
+        }
         const matches = AIRPORTS.filter(a =>
             a.code.toLowerCase().includes(q) ||
             a.name.toLowerCase().includes(q) ||
@@ -206,6 +216,9 @@ function setupSearch() {
         `).join("");
         results.style.display = "block";
     });
+    input.addEventListener("focus", () => {
+        input.select();
+    });
     document.addEventListener("click", (e) => {
         if (!e.target.closest(".search-box")) results.style.display = "none";
     });
@@ -217,9 +230,15 @@ function selectAirport(airport) {
     selectedTerminal = 0;
     previousWaitTimes = {};
     document.getElementById("searchResults").style.display = "none";
-    document.getElementById("airportSearch").value = "";
+    document.getElementById("airportSearch").value = airport.code + " — " + airport.name;
     document.getElementById("airportDashboard").style.display = "block";
-    document.getElementById("popularAirports").style.display = "none";
+
+    // Collapse hero into compact search bar
+    const hero = document.getElementById("hero");
+    hero.classList.add("hero-collapsed");
+
+    // Scroll to dashboard
+    document.getElementById("tracker").scrollIntoView({ behavior: "smooth", block: "start" });
 
     document.getElementById("airportName").textContent = airport.name;
     document.getElementById("airportCode").textContent = airport.code;

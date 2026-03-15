@@ -12,105 +12,36 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Landing / Hero -->
+    <!-- Search-First Hero -->
     <header class="hero" id="hero">
-        <nav class="nav">
-            <div class="nav-brand">
-                <span class="nav-icon">✈️</span>
-                <span class="nav-title">AirQ</span>
+        <div class="hero-bg"><div class="hero-grid"></div></div>
+        <div class="hero-search-wrap">
+            <div class="hero-brand">
+                <span class="hero-logo">✈️</span>
+                <span class="hero-title">AirQ</span>
             </div>
-            <div class="nav-links">
-                <a href="#features">Features</a>
-                <a href="#tracker" class="btn-nav">Launch Tracker</a>
-            </div>
-        </nav>
-        <div class="hero-content">
-            <div class="hero-badge">LIVE TRACKING FOR 450+ US AIRPORTS</div>
-            <h1>Know When to Leave.<br><span class="gradient-text">Down to the Minute.</span></h1>
-            <p class="hero-sub">Terminal-level security spikes. Dynamic "leave now" alerts. Safe Zone and Risk Zone windows so you never cut it too close — or waste time at the gate. 100% free.</p>
-            <div class="hero-actions">
-                <a href="#tracker" class="btn-primary btn-lg">Check Wait Times — Free <span class="btn-arrow">→</span></a>
-                <a href="#features" class="btn-ghost btn-lg">How It Works</a>
-            </div>
-            <div class="hero-stats">
-                <div class="stat">
-                    <span class="stat-num">450+</span>
-                    <span class="stat-label">US Airports</span>
+            <h1 class="hero-heading">Airport Security Wait Times</h1>
+            <p class="hero-tagline">Real-time estimates for 100+ US airports</p>
+            <div class="search-box hero-search-box">
+                <div class="search-input-wrap hero-input-wrap">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="airportSearch" placeholder="Search airport code or city (e.g., LAX, Atlanta)..." autocomplete="off">
                 </div>
-                <div class="stat-divider"></div>
-                <div class="stat">
-                    <span class="stat-num">24/7</span>
-                    <span class="stat-label">Live Updates</span>
-                </div>
-                <div class="stat-divider"></div>
-                <div class="stat">
-                    <span class="stat-num">Terminal</span>
-                    <span class="stat-label">Level Detail</span>
-                </div>
+                <div class="search-results" id="searchResults"></div>
             </div>
-        </div>
-        <div class="hero-bg">
-            <div class="hero-grid"></div>
+            <div class="hero-popular" id="popularAirports">
+                <div class="popular-grid" id="popularGrid"></div>
+            </div>
+            <div class="live-indicator hero-live">
+                <span class="live-dot"></span> LIVE
+            </div>
         </div>
     </header>
 
-    <!-- Features -->
-    <section class="features" id="features">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-badge">FEATURES</span>
-                <h2>Not Just Wait Times.<br>A Decision Engine.</h2>
-            </div>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">⏱️</div>
-                    <h3>Live Wait Times</h3>
-                    <p>Real-time security checkpoint and check-in wait times by terminal. See which checkpoint is fastest right now.</p>
-                    <span class="feature-tier free">FREE</span>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🚨</div>
-                    <h3>Spike Alerts</h3>
-                    <p>"Security just spiked at Terminal 3 — if you don't leave in the next 12 minutes, you'll miss your 4:00 PM flight." Dynamic, urgent, real.</p>
-                    <span class="feature-tier free">FREE</span>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🛡️</div>
-                    <h3>Safe Zone / Risk Zone</h3>
-                    <p>Not one arrival time — two windows. The Safe Zone (95% confidence) and Risk Zone (you might make it). We always err on the side of caution.</p>
-                    <span class="feature-tier free">FREE</span>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">📊</div>
-                    <h3>Continuous Predictions</h3>
-                    <p>Predictions update every 2 minutes and shift in real-time as conditions change. The closer your flight, the sharper the prediction.</p>
-                    <span class="feature-tier free">FREE</span>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Tracker App -->
+    <!-- Dashboard (shown after search) -->
     <section class="tracker-section" id="tracker">
         <div class="container">
             <div class="tracker-app" id="trackerApp">
-                <div class="tracker-header">
-                    <h2>Airport Security Tracker</h2>
-                    <div class="tracker-header-right">
-                        <div class="live-indicator">
-                            <span class="live-dot"></span> LIVE
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Airport Search -->
-                <div class="search-box">
-                    <div class="search-input-wrap">
-                        <span class="search-icon">🔍</span>
-                        <input type="text" id="airportSearch" placeholder="Search airport by name or code (e.g., LAX, JFK, Atlanta)..." autocomplete="off">
-                    </div>
-                    <div class="search-results" id="searchResults"></div>
-                </div>
 
                 <!-- Selected Airport Dashboard -->
                 <div class="airport-dashboard" id="airportDashboard" style="display: none;">
@@ -275,11 +206,6 @@
                     </div>
                 </div>
 
-                <!-- Popular Airports Quick Access -->
-                <div class="popular-airports" id="popularAirports">
-                    <h3>Popular Airports</h3>
-                    <div class="popular-grid" id="popularGrid"></div>
-                </div>
             </div>
         </div>
     </section>
@@ -315,7 +241,7 @@
                     <p>Live airport security tracking & smart predictions.</p>
                 </div>
                 <div class="footer-links">
-                    <a href="#features">Features</a>
+                    <a href="#hero">Search</a>
                     <a href="#tracker">Tracker</a>
                 </div>
             </div>
